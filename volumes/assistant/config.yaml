@@ -1,0 +1,43 @@
+# volumes/assistant/config.yaml
+# Конфигурация умной колонки
+
+# Параметры аудио
+audio:
+#  device: "default"
+  input_device: "hw:2,0"    # Микрофон (card 2, device 0)
+  output_device: "hw:3,0"   # Колонка (card 3, device 0)
+  sample_rate: 48000
+  channels: 1
+  duration_wakeword: 2
+  duration_command: 3
+  silence_threshold: 0.01
+
+# Модели AI
+models:
+  wake_word: "ok_nabu"
+  whisper: "base"
+  whisper_language: "ru"
+  ollama: "qwen2.5:1.5b"
+
+# URLs сервисов
+services:
+  whisper_url: "http://whisper:8200/inference"
+  ollama_url: "http://ollama:11434/api/generate"
+  piper_url: "http://piper:5000/?text="
+
+# Параметры работы
+runtime:
+  test_mode: false
+  wake_word_threshold: 0.05
+  wake_word_mode: "volume"  # "volume" или "openwakeword"
+
+
+# Настройки хранения аудио
+storage:
+  audio_output_dir: "/app/audio"
+  max_audio_size_mb: 50
+  max_audio_files: 10
+
+# Системные
+system:
+  llm_system_prompt: "Вы — помощник умной колонки. Отвечайте кратко, на русском, максимум 20 слов."

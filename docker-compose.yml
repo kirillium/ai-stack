@@ -1,0 +1,250 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ai-ollama
+    ports:
+      - "11434:11434"
+#      - "11435:11435"
+    volumes:
+      - ./volumes/ollama:/root/.ollama
+#    environment:
+#      - OLLAMA_HOST=0.0.0.0:11434
+#      - OLLAMA_OPENAI_API=true  # ← Включи OpenAI-compatible API
+    restart: unless-stopped
+   # user: "1000:1000" #добавил на всякий случай, не пригодилось
+
+  openclaw-gateway:
+    image: ${OPENCLAW_IMAGE:-alpine/openclaw:latest}
+    container_name: ai-openclaw-gateway
+#    network_mode: host    #добавил для видимости Ollama при установке
+    environment:
+      HOME: /home/node
+      TERM: xterm-256color
+      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN:-}
+      OPENCLAW_ALLOW_INSECURE_PRIVATE_WS: ${OPENCLAW_ALLOW_INSECURE_PRIVATE_WS:-}
+      CLAUDE_AI_SESSION_KEY: ${CLAUDE_AI_SESSION_KEY:-}
+#      OLLAMA_BASE_URL: http://127.0.0.1:11434    #добавил для видимости Ollama при установке
+      OLLAMA_BASE_URL: http://ollama:11434
+    ports:
+      - "${OPENCLAW_GATEWAY_PORT:-18789}:18789"
+      - "${OPENCLAW_BRIDGE_PORT:-18790}:18790"
+    init: true
+    restart: unless-stopped
+    command:
+      - "node"
+      - "dist/index.js"
+      - "gateway"
+      - "--bind"
+      - "${OPENCLAW_GATEWAY_BIND:-lan}"
+      - "--port"
+      - "18789"
+    volumes:
+      - ./volumes/openclaw:/home/node/.openclaw
+      - ./volumes/openclaw/workspace:/home/node/.openclaw/workspace
+      - /var/run/docker.sock:/var/run/docker.sock
+    user: "1000:1000"   #добавил для обхода ошибки с правами EACCES: permission denied
+
+  openclaw-cli:
+    image: ${OPENCLAW_IMAGE:-alpine/openclaw:latest}
+    container_name: ai-openclaw-cli
+    network_mode: "service:openclaw-gateway"
+    cap_drop:
+      - NET_RAW
+      - NET_ADMIN
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      HOME: /home/node
+      TERM: xterm-256color
+      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN:-}
+      OPENCLAW_ALLOW_INSECURE_PRIVATE_WS: ${OPENCLAW_ALLOW_INSECURE_PRIVATE_WS:-}
+      CLAUDE_AI_SESSION_KEY: ${CLAUDE_AI_SESSION_KEY:-}
+      CLAUDE_WEB_SESSION_KEY: ${CLAUDE_WEB_SESSION_KEY:-}
+      # добавьте остальные ваши ключи/переменные окружения по необходимости
+#      OLLAMA_BASE_URL: http://127.0.0.1:11434   #добавил для видимости Ollama при установке
+      OLLAMA_BASE_URL: http://ollama:11434
+    volumes:
+      - ./volumes/openclaw:/home/node/.openclaw
+      - ./volumes/openclaw/workspace:/home/node/.openclaw/workspace
+    stdin_open: true
+    tty: true
+    init: true
+    entrypoint: ["node", "dist/index.js"]
+    user: "1000:1000"   #добавил для обхода ошибки с правами EACCES: permission denied
+    restart: unless-stopped
+    depends_on:
+      - openclaw-gateway
+
+  moltis:
+    image: ghcr.io/moltis-org/moltis:latest
+    container_name: ai-moltis
+    ports:
+      - "13131:13131"
+      - "13132:13132"
+      - "1455:1455"
+    volumes:
+      # Монтируем локальные папки в пути контейнера
+      - ./volumes/moltis/config:/home/moltis/.config/moltis
+      - ./volumes/moltis/data:/home/moltis/.moltis
+      # Проброс Docker-сокета для работы инструментов
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - MOLTIS_PASSWORD=12345678
+    restart: unless-stopped
+    user: "1000:1000"   #добавил для обхода ошибки с правами permission denied
+
+  whisper:
+    image: local-whisper
+    container_name: ai-whisper
+    restart: unless-stopped
+    ports:
+      - "8200:8200"
+    volumes:
+      - ./volumes/whisper:/models
+
+  piper:
+    image: piper-http:arm64
+#    image: artibex/piper-http:latest
+    container_name: ai-piper
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./volumes/piper:/app/models
+    environment:
+#      - PIPER_MODEL=ru_RU-ruslan-medium.onnx
+      - MODEL_DOWNLOAD_LINK=https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/ru/ru_RU/ruslan/medium/ru_RU-ruslan-medium.onnx?download=true
+
+  openwakeword:
+    container_name: ai-openwakeword
+    image: rhasspy/wyoming-openwakeword
+    restart: unless-stopped
+    devices:
+      - "/dev/snd:/dev/snd"  # Проброс аудио-устройств [web:1][web:10]
+    volumes:
+      - ./volumes/openwakeword:/share/custom  # Для ваших кастомных моделей
+    ports:
+      - "10400:10400"  # Порт по умолчанию для протокола Wyoming
+    command: --preload-model 'ok_nabu' --custom-model-dir /share/custom
+
+#      - OLLAMA_HOST=http://ai-ollama:11434
+#    depends_on:
+#      - ollama
+#    user: "1000:1000"
+
+  nanoclaw:
+    container_name: ai-nanoclaw
+    image: node:22-slim
+    restart: unless-stopped
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+#      - OLLAMA_ADMIN_TOOLS=true
+      - HOME=/root
+    volumes:
+      - ./volumes/nanoclaw:/workspace
+      - ./git-nanoclaw:/app/source
+      - /var/run/docker.sock:/var/run/docker.sock
+    working_dir: /workspace
+#    command: bash -c "npm install -g @anthropic-ai/claude-code bun && exec tail -f /dev/null"
+#    command: bash -c "npm install -g ollama-chat-agent && exec tail -f /dev/null"
+    # Устанавливаем curl при запуске контейнера
+    command: >
+      bash -c "
+        apt-get update && apt-get install -y curl &&
+        exec tail -f /dev/null
+      "
+    tty: true
+    stdin_open: true
+
+  microclaw:
+    build:
+      context: ./git-microclaw  # <-- Уберите /microclaw
+      dockerfile: Dockerfile
+    container_name: ai-microclaw
+    environment:
+      - OPENAI_API_KEY=ollama
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - EMAIL_USERNAME=${EMAIL_USERNAME:-}
+      - EMAIL_PASSWORD=${EMAIL_PASSWORD:-}
+    volumes:
+      - ./volumes/microclaw/config.yaml:/app/config.yaml:ro
+      - ./volumes/microclaw/.env:/app/.env:ro
+#      - microclaw-data:/app/data
+    depends_on:
+      - ollama
+    restart: unless-stopped
+#    networks:
+#      - ai-network
+
+#volumes:  # <-- ДОБАВЬТЕ ЭТУ СЕКЦИЮ
+#  microclaw-data:
+
+  agent:
+    build:
+      context: ./git-agent
+      dockerfile: Dockerfile
+    container_name: ai-agent
+    volumes:
+      - ./volumes/agent:/app/config
+      - /dev/snd:/dev/snd
+    devices:
+      - "/dev/snd:/dev/snd"
+    group_add:
+      - "audio"
+    environment:
+      # Протокол HTTP для ollama, whisper, piper
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - WHISPER_BASE_URL=http://whisper:8200
+      - PIPER_BASE_URL=http://piper:5000
+      # Протокол TCP для wyoming-openwakeword
+      - OPENWAKEWORD_URI=tcp://openwakeword:10400
+      # Альтернативные имена переменных (подстройте под свой agent.py)
+#      - OLLAMA_HOST=http://ollama:11434
+#      - WHISPER_HOST=http://whisper:8200
+#      - PIPER_HOST=http://piper:5000
+#      - OPENWAKEWORD_HOST=openwakeword
+#      - OPENWAKEWORD_PORT=10400
+    depends_on:
+      - ollama
+      - whisper
+      - piper
+      - openwakeword
+    restart: unless-stopped
+    privileged: true
+#    networks:
+#      - ai-stack
+
+  # Оркестратор умной колонки
+  assistant:
+    build:
+      context: ./volumes/assistant
+      dockerfile: Dockerfile
+    container_name: ai-assistant
+    # network_mode: host  # УДАЛИТЬ — используем дефолтную bridge сеть
+    devices:
+      - "/dev/snd:/dev/snd"  # Проброс аудиоустройств (работает без host network)
+    volumes:
+      - ./volumes/assistant:/app
+#      - ./volumes/assistant:/data
+      - ./volumes/assistant/audio:/app/audio
+    environment:
+#      - AUDIO_DEVICE=default
+#      - WAKE_WORD_MODEL=ok_nabu
+#      - WHISPER_MODEL=base
+#      - OLLAMA_MODEL=gemma3:1b
+      - PYTHONUNBUFFERED=1
+      # URLs сервисов по именам из docker network
+#      - WHISPER_URL=http://ai-whisper:8200/v1/audio/transcriptions
+#      - OLLAMA_URL=http://ai-ollama:11434/api/generate
+#      - PIPER_URL=http://ai-piper:5000/api/tts
+#      - OPENWAKEWORD_URL=http://ai-openwakeword:10400
+    restart: unless-stopped
+    depends_on:
+      - ollama
+      - whisper
+      - piper
+      - openwakeword
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"

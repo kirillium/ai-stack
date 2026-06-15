@@ -1,0 +1,32 @@
+#Игнорируем и НЕ помещаем в GIT файлы и папки
+# AI модели (гигабайты)
+volumes/agent/
+volumes/microclaw/
+volumes/moltis/
+volumes/nanoclaw/
+volumes/ollama/
+volumes/openclaw/
+volumes/openwakeword/
+volumes/piper/
+volumes/whisper/
+
+# Аудиофайлы
+volumes/assistant/audio/
+*.wav
+*.mp3
+*.flac
+
+# Логи
+*.log
+__pycache__/
+*.pyc
+
+# Docker cache
+git-*/
+.docker/
+piper-http-for-delete
+
+# Системные файлы
+.env
+*.key
+*.cert

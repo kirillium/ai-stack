@@ -1,0 +1,42 @@
+# assistant/Dockerfile
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Установка системных зависимостей
+RUN apt-get update && apt-get install -y \
+    alsa-utils \
+# для аудио и микрофона
+    libasound2 \
+    libportaudio2 \
+    portaudio19-dev \
+    curl \
+#    alsa-oss \
+# для OpenCV - тут есть ошибки, надо будет разбираться, когда буду настраивать работу с камерой и OpenCV
+#    libgl1-mesa-glx \
+#    libglib2.0-0 \
+#    libsm6 \
+#    libxext6 \
+#    libxrender1 \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Копирование requirements
+COPY requirements.txt .
+
+# Установка Python зависимостей
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Копирование скрипта оркестратора
+COPY orchestrator.py .
+COPY config.yaml .
+
+# Создание директории для данных
+#RUN mkdir -p /data
+RUN mkdir -p /app/audio
+
+# Установка wyoming client для openwakeword
+#RUN pip install --no-cache-dir wyoming
+
+# Запуск оркестратора
+CMD ["python", "orchestrator.py"]
