@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y \
     libportaudio2 \
     portaudio19-dev \
     curl \
+    mpv \
 #    alsa-oss \
 # для OpenCV - тут есть ошибки, надо будет разбираться, когда буду настраивать работу с камерой и OpenCV
 #    libgl1-mesa-glx \
@@ -30,6 +31,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Копирование скрипта оркестратора
 COPY orchestrator.py .
 COPY config.yaml .
+COPY commands.yaml .
+COPY directive_handlers.py .
 
 # Создание директории для данных
 #RUN mkdir -p /data

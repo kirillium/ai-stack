@@ -41,3 +41,21 @@ storage:
 # Системные
 system:
   llm_system_prompt: "Вы — помощник умной колонки. Отвечайте кратко, на русском, максимум 20 слов."
+
+# === БЛОК JAMENDO (заполни своими данными) ===
+jamendo:
+  client_id: "YOUR_CLIENT_ID_HERE"  # Твой client_id от devportal.jamendo.com
+  radio_id: "radio_1"                # Или: "radio_pop", "radio_rock", "radio_electronic"
+  stream_format: "ogg"               # Формат: "ogg" или "mp3"
+
+# === ПЛАН-ПЛАН БЛОК ПОГОДЫ (заполни API погоды) ===
+weather:
+  api_url: "https://api.weather.com"   # API погоды (например, OpenWeatherMap)
+  api_key: "YOUR_WEATHER_API_KEY"      # Твой API ключ
+  city: "Moscow"                       # Город для погоды
+
+# === ПЛАН-ПЛАН БЛОК НАПОМИНАНЙ (можно использовать локальное или внешнее) ===
+reminder:
+  storage_file: "/tmp/reminders.json"  # Файл для хранения напоминаний
+  # Или внешнее API:
+  # api_url: "http reminder-api:8080"

@@ -12,11 +12,6 @@ import os
 import yaml
 import cv2
 from pathlib import Path
-import threading
-
-# Глобальные переменные для управления музыкой
-music_process = None  # Процесс mpv для потока
-music_playing = False  # Флаг включения музыки
 
 # Загрузка конфигурации из YAML
 def load_config():
@@ -24,39 +19,7 @@ def load_config():
     with open(config_path, 'r', encoding='utf-8') as f:
         return yaml.safe_load(f)
 
-# Загрузка команд из commands.yaml
-def load_commands():
-    commands_path = os.path.join(os.path.dirname(__file__), 'commands.yaml')
-    try:
-        with open(commands_path, 'r', encoding='utf-8') as f:
-            return yaml.safe_load(f)
-    except FileNotFoundError:
-        print("⚠️ commands.yaml не найден, используем пустой список команд")
-        return {"directive_commands": {}}
-
-# Загрузка импортов обработчиков
-def load_directive_handlers():
-    """Импортирует функции обработчиков из directive_handlers.py"""
-    from directive_handlers import (
-        handle_play_music,
-        handle_stop_music,
-        handle_vacuum_start,
-        handle_vacuum_stop,
-        handle_reminder_set,
-        handle_weather_get
-    )
-    return {
-        "handle_play_music": handle_play_music,
-        "handle_stop_music": handle_stop_music,
-        "handle_vacuum_start": handle_vacuum_start,
-        "handle_vacuum_stop": handle_vacuum_stop,
-        "handle_reminder_set": handle_reminder_set,
-        "handle_weather_get": handle_weather_get
-    }
-
 CONFIG = load_config()
-COMMANDS = load_commands()
-HANDLERS = load_directive_handlers()
 
 # 1. Запись аудио с микрофона
 def record_audio(duration=None, fs=None):
@@ -106,9 +69,10 @@ def transcribe(audio_path, test_mode=None):
         response = requests.post(
             CONFIG["services"]["whisper_url"],
             files={'file': open(audio_path, 'rb')},
+#            data={'response_format': 'json'},
             data={
                 'response_format': 'json',
-                'language': CONFIG["models"].get("whisper_language", "ru")
+                'language': CONFIG["models"].get("whisper_language", "ru")  # CHANGE
             },
             timeout=60
         )
@@ -204,14 +168,23 @@ def play_audio(audio_path):
     except Exception as e:
         print(f"❌ Ошибка воспроизведения: {e}")
 
-# 7. Детекция Wake Word (простой threshold на громкость)
+# 7. Детекция Wake Word (через Wyoming protocol openwakeword)
+#def detect_wake_word():
+#    print("🔍 Ожидание wake word...")
+#    duration = CONFIG["audio"]["duration_wakeword"]
+#    recording, fs = record_audio(duration=duration)
+#    save_audio(recording, fs)
+#    return True
+
+#Вариант Г: Временное решение (простой threshold на громкость)
 def detect_wake_word():
     print("🔍 Ожидание wake word (по громкости)...")
 
     recording, fs = record_audio(duration=2)
+
     # Вычисление громкости
     volume = np.mean(np.abs(recording))
-    threshold = 0.05
+    threshold = 0.05  # Подстроить
 
     print(f"📊 Volume: {volume}")
 
@@ -220,70 +193,12 @@ def detect_wake_word():
         return True
     return False
 
-
-# === НОВЫЙ БЛОК: Обработка директивных команд ===
-def handle_directive_command(transcript):
-    """
-    Проверяет transcript на совпадение с директивными командами из commands.yaml.
-    Возвращает:
-        - (True, response_text) если команда найдена и обработана
-        - (False, None) если команда не найдена (нужно отправить в Ollama)
-    """
-    transcript_lower = transcript.lower()
-    directive_commands = COMMANDS.get("directive_commands", {})
-    
-    for trigger, config in directive_commands.items():
-        if trigger in transcript_lower:
-            action = config.get("action")
-            response_template = config.get("response", "")
-            
-            print(f"🎯 Директивная команда: {trigger} → {action}")
-            handler = HANDLERS.get(f"handle_{action}")
-            
-            if not handler:
-                print(f"⚠️ Нет обработчика для действия: {action}")
-                return True, "Команда распознана, но обработчик не реализован"
-            
-            # Вызов обработчика
-            try:
-                result = handler(transcript)
-                
-                # Если обработчик возвращает строку (ответ пользователю)
-                if isinstance(result, str):
-                    return True, result
-                
-                # Если обработчик возвращает bool (успех/неудача)
-                elif isinstance(result, bool):
-                    if result:
-                        return True, response_template
-                    else:
-                        return True, f"Не удалось выполнить: {action}"
-                
-                # Если обработчик возвращает tuple (success, response)
-                elif isinstance(result, tuple):
-                    success, response = result
-                    if success:
-                        return True, response
-                    else:
-                        return True, response
-                
-                else:
-                    return True, f"Команда {action} обработана"
-                    
-            except Exception as e:
-                print(f"❌Ошибка в обработчике {action}: {e}")
-                return True, f"Ошибка выполнения: {action}"
-    
-    # Команда не найдена → отправлять в Ollama
-    return False, None
-
-
-# Основной класс оркестратора умной колонки
+#Основной класс оркестратора умной колонки
 class VoiceAssistant:
     def __init__(self):
         self.is_running = False
 
-# Обработка голосовой команды
+#Обработка голосовой команды
     async def process_command(self):
         print("\n" + "="*50)
         print("🎙️ ОБРАБОТКА КОМАНДЫ")
@@ -299,39 +214,25 @@ class VoiceAssistant:
             duration = CONFIG["audio"]["duration_command"]
             recording, fs = record_audio(duration=duration)
             audio_path = save_audio(recording, fs)
-	    # 2. Транскрибация
-            transcript = transcribe(audio_path, test_mode=False)
+            transcript = transcribe(audio_path, test_mode=False) # 2. Транскрибация
             if not transcript:
                 print("❌ Не распознано")
                 return
 
-        # === НОВЫЙ БЛОК: Проверка на директивную команду ===
-        directive_found, response_text = handle_directive_command(transcript)
-        
-        if directive_found:
-            print(f"💬 Ответ: {response_text}")
-            audio_path = synthesize(response_text)
-            if audio_path:
-                play_audio(audio_path)
-            print("\n✅ Готов\n")
-            return  # НЕ отправляем в Ollama
-        
-        # === Остальной код: запрос к Ollama ===
-	# 3. Запрос к LLM
-        response = ask_llm(transcript)
+        response = ask_llm(transcript) # 3. Запрос к LLM
         if not response:
             print("❌ Нет ответа LLM")
             return
-	# 4. Синтез речи
-        audio_path = synthesize(response)
+
+        audio_path = synthesize(response) # 4. Синтез речи
         if not audio_path:
             print("❌ Нет синтеза")
             return
 
-        play_audio(audio_path)
+        play_audio(audio_path) # 5. Воспроизведение
         print("\n✅ Готов\n")
 
-# Главный цикл работы ассистента
+#Главный цикл работы ассистента
     def run(self):
         print("\n" + "="*50)
         print("🚀 ЗАПУСК УМНОЙ КОЛОНКИ")
@@ -361,7 +262,7 @@ class VoiceAssistant:
                 print(f"❌ Error: {e}")
                 time.sleep(1)
 
-# Точка входа
+#Точка входа
 def main():
     assistant = VoiceAssistant()
     assistant.run()

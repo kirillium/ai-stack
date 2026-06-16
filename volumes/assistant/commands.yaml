@@ -1,0 +1,76 @@
+# commands.yaml - список часто используемых директивных команд
+
+directive_commands:
+  # === Музыка (Jamendo) ===
+  "включи музыку": {
+    "action": "play_music",
+    "response": "Музыка включена"
+  }
+  "музыку включи": {
+    "action": "play_music",
+    "response": "Музыка включена"
+  }
+  "поставь музыку": {
+    "action": "play_music",
+    "response": "Музыка включена"
+  }
+  
+  # === Остановка музыки ===
+  "стоп": {
+    "action": "stop_music",
+    "response": "Музыка прекращена"
+  }
+  "останови музыку": {
+    "action": "stop_music",
+    "response": "Музыка прекращена"
+  }
+  "музыка стоп": {
+    "action": "stop_music",
+    "response": "Музыка прекращена"
+  }
+  "выключи музыку": {
+    "action": "stop_music",
+    "response": "Музыка прекращена"
+  }
+  
+  # === Пылесос ===
+  "включи пылесос": {
+    "action": "vacuum_start",
+    "response": "Пылесос включён"
+  }
+  "выключи пылесос": {
+    "action": "vacuum_stop",
+    "response": "Пылесос выключён"
+  }
+  "пылесос включи": {
+    "action": "vacuum_start",
+    "response": "Пылесос включён"
+  }
+  "пылесос выключи": {
+    "action": "vacuum_stop",
+    "response": "Пылесос выключён"
+  }
+  
+  # === Напоминание ===
+  "поставь напоминание": {
+    "action": "reminder_set",
+    "response": "Напоминание установлено"
+  }
+  "напоминание поставь": {
+    "action": "reminder_set",
+    "response": "Напоминание установлено"
+  }
+  
+  # === Погода ===
+  "какая сейчас погода": {
+    "action": "weather_get",
+    "response": "{weather}"
+  }
+  "погода": {
+    "action": "weather_get",
+    "response": "{weather}"
+  }
+  "какая погода": {
+    "action": "weather_get",
+    "response": "{weather}"
+  }
