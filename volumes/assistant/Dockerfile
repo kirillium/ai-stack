@@ -13,12 +13,19 @@ RUN apt-get update && apt-get install -y \
     curl \
     mpv \
 #    alsa-oss \
-# для OpenCV - тут есть ошибки, надо будет разбираться, когда буду настраивать работу с камерой и OpenCV
-#    libgl1-mesa-glx \
-#    libglib2.0-0 \
-#    libsm6 \
-#    libxext6 \
-#    libxrender1 \
+# аудио с сервера
+    smbclient \
+    wget \
+# для OpenCV
+    libcamera-dev \
+    libopenblas-dev \
+    libgl1 \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender1 \
+    ffmpeg \
+    g++ \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
