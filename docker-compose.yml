@@ -222,11 +222,14 @@ services:
     container_name: ai-assistant
     # network_mode: host  # УДАЛИТЬ — используем дефолтную bridge сеть
     devices:
-      - "/dev/snd:/dev/snd"  # Проброс аудиоустройств (работает без host network)
+      - /dev/snd:/dev/snd  # Проброс аудиоустройств (работает без host network)
+#      - /dev/video0:/dev/video0  # Доступ к камере
+#      - /dev/vchiq:/dev/vchiq    # Доступ к Vulkan/API камеры Pi
     volumes:
       - ./volumes/assistant:/app
 #      - ./volumes/assistant:/data
       - ./volumes/assistant/audio:/app/audio
+#      - /run/udev:/run/udev:ro   # Необходимо для OpenCV/libcamera
     environment:
 #      - AUDIO_DEVICE=default
 #      - WAKE_WORD_MODEL=ok_nabu

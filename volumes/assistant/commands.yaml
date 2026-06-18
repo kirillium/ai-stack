@@ -14,7 +14,21 @@ directive_commands:
     "action": "play_music",
     "response": "Музыка включена"
   }
-  
+
+  # === МУЗЫКА С СЕРВЕРА ===
+  "включи музыку с сервера": {
+    "action": "play_music_server",
+    "response": "Запускаю музыку с сервера"
+  }
+  "музыка с сервера": {
+    "action": "play_music_server",
+    "response": "Запускаю музыку с сервера"
+  }
+  "с сервера музыку": {
+    "action": "play_music_server",
+    "response": "Запускаю музыку с сервера"
+  }
+
   # === Остановка музыки ===
   "стоп": {
     "action": "stop_music",
@@ -32,7 +46,52 @@ directive_commands:
     "action": "stop_music",
     "response": "Музыка прекращена"
   }
-  
+
+  # === ГРОМКОСТЬ ===
+  "сделай громче": {
+    "action": "volume_up",
+    "response": "Громкость увеличена"
+  }
+  "громче": {
+    "action": "volume_up",
+    "response": "Громкость увеличена"
+  }
+  "увеличь громкость": {
+    "action": "volume_up",
+    "response": "Громкость увеличена"
+  }
+
+  "сделай тише": {
+    "action": "volume_down",
+    "response": "Громкость уменьшена"
+  }
+  "тише": {
+    "action": "volume_down",
+    "response": "Громкость уменьшена"
+  }
+  "уменьшь громкость": {
+    "action": "volume_down",
+    "response": "Громкость уменьшена"
+  }
+
+  # === Камера ===
+  "сколько человек ты видишь": {
+    "action": "count_people",
+    "response": "Я вижу {count} человек"
+  }
+  "распознай людей": {
+    "action": "recognize_objects",
+    "response": "{objects}"
+  }
+  "посмотри направо": {
+    "action": "move_camera_right",
+    "response": "Камера повернута направо"
+  }
+  "следи за шариком": {
+    "action": "track_object",
+    "response": "Начал слежение за шариком"
+  }
+
   # === Пылесос ===
   "включи пылесос": {
     "action": "vacuum_start",
@@ -50,7 +109,7 @@ directive_commands:
     "action": "vacuum_stop",
     "response": "Пылесос выключён"
   }
-  
+
   # === Напоминание ===
   "поставь напоминание": {
     "action": "reminder_set",
@@ -60,7 +119,7 @@ directive_commands:
     "action": "reminder_set",
     "response": "Напоминание установлено"
   }
-  
+
   # === Погода ===
   "какая сейчас погода": {
     "action": "weather_get",

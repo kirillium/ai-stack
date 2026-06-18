@@ -5,10 +5,12 @@ import requests
 import json
 import os
 from datetime import datetime
+import shutil
 
 # Глобальные переменные для музыки (импортируются из orchestrator.py)
 music_process = None
 music_playing = False
+current_stream = None  # Текущий источник: "jamendo" или "server"
 
 # Импортируем CONFIG из orchestrator.py (он будет загружен перед этим модулем)
 CONFIG = None
@@ -115,7 +117,7 @@ def handle_play_music(transcript):
     Обрабатывает команду включения музыки (Jamendo).
     Возвращает: (success, response_text)
     """
-    global music_process, music_playing
+    global music_process, music_playing, current_stream
     
     if music_playing:
         print("⚠️ Музыка уже играет")
@@ -150,9 +152,10 @@ def handle_play_music(transcript):
             stderr=subprocess.PIPE
         )
         music_playing = True
-        print("✅Музыка запущена")
+        current_stream = "jamendo"
+        print("✅Музыка запущена (Jamendo)")
         return (True, "Музыка включена")
-        
+
     except Exception as e:
         print(f"❌Ошибка запуска музыки: {e}")
         return (False, f"Не удалось включить музыку: {e}")
@@ -163,7 +166,7 @@ def handle_stop_music(transcript):
     Обрабатывает команду прекращения музыки.
     Возвращает: (success, response_text)
     """
-    global music_process, music_playing
+    global music_process, music_playing, current_stream
     
     if not music_playing:
         print("⚠️ Музыка не играет")
@@ -177,13 +180,188 @@ def handle_stop_music(transcript):
             music_process.wait(timeout=3)
         music_process = None
         music_playing = False
+        current_stream = None
         print("✅Музыка прекращена")
         return (True, "Музыка прекращена")
         
     except Exception as e:
         print(f"❌Ошибка прекращения музыки: {e}")
         music_playing = False
+        current_stream = None
         return (False, f"Не удалось остановить музыку: {e}")
+
+
+# === МУЗЫКА С НАС (music_server) ===
+
+def get_music_file_from_server():
+    """
+    Получает путь к музыкальному файлу на NAS.
+    Пока используется фиксированный файл для отладки.
+    В перспективе (Этап 2) будет поиск по исполнителю.
+    Возвращает: (success, local_path или error_message)
+    """
+    if CONFIG is None:
+        return (False, "Конфиг не загружен")
+    
+    ip = CONFIG["music_server"]["ip"]
+    path = CONFIG["music_server"]["path"]
+    username = CONFIG["music_server"].get("username", "")
+    password = CONFIG["music_server"].get("password", "")
+    
+    # пока используем фиксированный файл для отладки
+    # В Этапе 2 будет поиск по исполнителю
+    filename = "04. Auslander.flac"
+    artist_folder = "Rammstein - Rammstein - 2019"
+    
+    # Полный путь на сервере
+    # Для Windows SMB: \\192.168.1.171\музыка\Rammstein...\04. Auslander.flac
+    # Для Linux: /mnt/nas/музыка/Rammstein.../04. Auslander.flac
+    
+    # Попытка 1: Windows SMB формат
+    server_path_windows = f"\\\\{ip}\\{path}\\{artist_folder}\\{filename}"
+    
+    # Попытка 2: Linux формат
+    server_path_linux = f"/{ip}/{path}/{artist_folder}/{filename}"
+    
+    # Локальный кэш для скачивания файла
+    cache_dir = "/app/audio/server_music"
+    os.makedirs(cache_dir, exist_ok=True)
+    
+    local_path = os.path.join(cache_dir, filename)
+    
+    # Скачиваем файл через SMB (если нужно) или используем network path напрямую
+    try:
+        # Прямой доступ к network path (mpv может играть из network)
+        # mpv поддерживает SMB пути в формате \\server\path
+        print(f"🎵 Путь к файлу: {server_path_windows}")
+        
+        # Проверка доступности файла
+        if os.path.exists(server_path_windows):
+            print(f"✅Файл доступен: {server_path_windows}")
+            return (True, server_path_windows)
+        
+        # Если не существует, попробуем Linux формат
+        if os.path.exists(server_path_linux):
+            print(f"✅Файл доступен: {server_path_linux}")
+            return (True, server_path_linux)
+        
+        # Если файл не доступен напрямую, скачиваем через smbclient
+        # (требуется установка smbclient в Docker)
+        print(f"⚠️Файл не доступен напрямую, попробуем скачать...")
+        
+        # Команда для скачивания через smbclient
+        # BEGIN: smb://user:pass@ip/path/file.wav
+        smb_url = f"smb://{username}:{password}@{ip}/{path}/{artist_folder}/{filename}" if username else f"smb://{ip}/{path}/{artist_folder}/{filename}"
+        
+        # Скачивание через wget или curl
+        download_cmd = [
+            "wget",
+            "-O", local_path,
+            smb_url.replace("smb://", "http://")  # Замена для wget (если NAS поддерживает HTTP)
+        ]
+        
+        # Альтернатива: через cp если mount
+        # Сначала попробуем mount (если NAS mount в системе)
+        
+        # Пока возвращаем network path для mpv (mpv может играть из network)
+        return (True, server_path_windows)
+        
+    except Exception as e:
+        print(f"❌Ошибка доступа к файлу на сервере: {e}")
+        return (False, f"Не удалось найти музыку на сервере: {e}")
+
+
+def handle_play_music_server(transcript):
+    """
+    Обрабатывает команду включения музыки с NAS.
+    Пока используется фиксированный файл (Этап 1).
+    В перспективе (Этап 2) будет поиск по исполнителю из transcript.
+    Возвращает: (success, response_text)
+    """
+    global music_process, music_playing, current_stream
+    
+    if music_playing:
+        print("⚠️ Музыка уже играет")
+        return (True, "Музыка уже включена")
+    
+    print("🎵 Запуск музыки с сервера...")
+    
+    # Получаем путь к файлу
+    success, file_path = get_music_file_from_server()
+    
+    if not success:
+        return (False, file_path)  # file_path содержит error message
+    
+    print(f"🎵 Запуск файла: {file_path}")
+    
+    # Запуск через mpv
+    try:
+        music_process = subprocess.Popen(
+            ["mpv", "--no-video", file_path],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+        music_playing = True
+        current_stream = "server"
+        print("✅Музыка с сервера запущена")
+        return (True, "Запускаю музыку с сервера")
+        
+    except Exception as e:
+        print(f"❌Ошибка запуска музыки с сервера: {e}")
+        return (False, f"Не удалось включить музыку с сервера: {e}")
+
+
+# === ГРОМКОСТЬ ===
+
+def handle_volume_up(transcript):
+    """
+    Обрабатывает команду увеличения громкости.
+    Шаг громкости из config.yaml.
+    Возвращает: (success, response_text)
+    """
+    if CONFIG is None:
+        return (False, "Конфиг не загружен")
+    
+    step = CONFIG["volume"]["step"]
+    device = CONFIG["volume"].get("device", "default")
+    
+    try:
+        # Использование amixer для управления громкостью
+        # Увеличение громкости
+        cmd = ["amixer", "-D", device, "set", "Master", f"{step}%+"]
+        subprocess.run(cmd, check=True, capture_output=True)
+        
+        print(f"✅Громкость увеличена на {step}%")
+        return (True, f"Громкость увеличена на {step}%")
+        
+    except Exception as e:
+        print(f"❌Ошибка увеличения громкости: {e}")
+        return (False, f"Не удалось увеличить громкость: {e}")
+
+
+def handle_volume_down(transcript):
+    """
+    Обрабатывает команду уменьшения громкости.
+    Шаг громкости из config.yaml.
+    Возвращает: (success, response_text)
+    """
+    if CONFIG is None:
+        return (False, "Конфиг не загружен")
+    
+    step = CONFIG["volume"]["step"]
+    device = CONFIG["volume"].get("device", "default")
+    
+    try:
+        # Уменьшение громкости
+        cmd = ["amixer", "-D", device, "set", "Master", f"{step}%-"]
+        subprocess.run(cmd, check=True, capture_output=True)
+        
+        print(f"✅Громкость уменьшена на {step}%")
+        return (True, f"Громкость уменьшена на {step}%")
+        
+    except Exception as e:
+        print(f"❌Ошибка уменьшения громкости: {e}")
+        return (False, f"Не удалось уменьшить громкость: {e}")
 
 
 # === ПЫЛЕСОС ===
@@ -246,7 +424,7 @@ def handle_vacuum_stop(transcript):
         return (False, f"Ошибка подключения к пылесосу: {e}")
 
 
-# === НАПОМИНАНЙ ===
+# === НАПОМИНАНИЕ ===
 
 def handle_reminder_set(transcript):
     """

@@ -48,6 +48,20 @@ jamendo:
   radio_id: "radio_1"                # Или: "radio_pop", "radio_rock", "radio_electronic"
   stream_format: "ogg"               # Формат: "ogg" или "mp3"
 
+# === БЛОК МУЗЫКАЛЬНЙ БИБЛИОТЕКИ (NAS) ===
+music_server:
+  ip: "192.168.1.171"            # IP твоего NAS
+  path: "/музыка"                # Путь к папке с музыкой (без сервера, только путь)
+  # Для Windows SMB: используйте формат \\NAS\музыка или /NAS/музыка
+  # Для Linux NFS: /mnt/music или /media/music
+  username: ""                   # Если нужен доступ (опционально)
+  password: ""                   # Если нужен доступ (опционально)
+
+# === БЛОК ГРОМКОСТИ ===
+volume:
+  step: 15                       # Шаг громкости в процентах (15%)
+  device: "default"              # Аудиоустройство (можно оставить "default")
+
 # === ПЛАН-ПЛАН БЛОК ПОГОДЫ (заполни API погоды) ===
 weather:
   api_url: "https://api.weather.com"   # API погоды (например, OpenWeatherMap)
@@ -59,3 +73,9 @@ reminder:
   storage_file: "/tmp/reminders.json"  # Файл для хранения напоминаний
   # Или внешнее API:
   # api_url: "http reminder-api:8080"
+
+# === ПЛАН-ПЛАН  БЛОК ПЫЛЕСОСА (твой текущий) ===
+vacuum:
+  api_url: "http://vacuum-api:8080"
+  start_endpoint: "/start"
+  stop_endpoint: "/stop"

@@ -44,6 +44,7 @@ COPY directive_handlers.py .
 # Создание директории для данных
 #RUN mkdir -p /data
 RUN mkdir -p /app/audio
+RUN mkdir -p /app/audio/server_music
 
 # Установка wyoming client для openwakeword
 #RUN pip install --no-cache-dir wyoming
