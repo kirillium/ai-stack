@@ -79,3 +79,13 @@ vacuum:
   api_url: "http://vacuum-api:8080"
   start_endpoint: "/start"
   stop_endpoint: "/stop"
+
+# === ПЛАН-ОСТАНОВЛЕНО БЛОК СЕРВОПРИВОДА ===
+servo:
+  pin: 17              # GPIO17 (пин №11)
+  min_angle: 0         # Минимальный угол (градусы)
+  max_angle: 180       # Максимальный угол (градусы)
+  min_duty: 2.5        # Минимальный duty cycle для твоего SG-90
+  max_duty: 10.0       # Максимальный duty cycle для твоего SG-90
+  pwm_frequency: 50    # PWM частота (Гц)
+  move_delay: 0.3      # Время ожидания после движения (сек)

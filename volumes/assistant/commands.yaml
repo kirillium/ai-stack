@@ -133,3 +133,33 @@ directive_commands:
     "action": "weather_get",
     "response": "{weather}"
   }
+# === СЕРВОПРИВОД (камера на SG-90) ===
+# РАЗРАБОТКА ОСТАНОВЛЕНА. код есть, но нет библиотек для работы с сервоприводом
+"поверни вправо": {
+  "action": "servo_turn_right",
+  "response": "Камера повернута направо"
+}
+"поверни направо": {
+  "action": "servo_turn_right",
+  "response": "Камера повернута направо"
+}
+"поверни влево": {
+  "action": "servo_turn_left",
+  "response": "Камера повернута налево"
+}
+"поверни налево": {
+  "action": "servo_turn_left",
+  "response": "Камера повернута налево"
+}
+"верни в центр": {
+  "action": "servo_reset",
+  "response": "Камера возвращена в центр"
+}
+"возврат в центр": {
+  "action": "servo_reset",
+  "response": "Камера возвращена в центр"
+}
+"центр": {
+  "action": "servo_reset",
+  "response": "Камера в центральном положении"
+}

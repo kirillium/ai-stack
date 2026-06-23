@@ -6,11 +6,13 @@ import json
 import os
 from datetime import datetime
 import shutil
+#from servo_controller import ServoController   # Раскомментировать, как появится библиотека для сервопривода
 
 # Глобальные переменные для музыки (импортируются из orchestrator.py)
 music_process = None
 music_playing = False
 current_stream = None  # Текущий источник: "jamendo" или "server"
+#servo = ServoController('config.yaml')  # Раскомментировать, как появится библиотека для сервопривода
 
 # Импортируем CONFIG из orchestrator.py (он будет загружен перед этим модулем)
 CONFIG = None
@@ -463,6 +465,64 @@ def handle_reminder_set(transcript):
         print(f"❌Ошибка хранения напоминания: {e}")
         return (False, f"Не удалось установить напоминание: {e}")
 
+# === усправление сервоприводом ===
+#def handle_servo(command):
+#    if command == "поверни вправо":
+#        servo.turn_right()
+#        return "Сервопривод повернут вправо"
+#    elif command == "поверни влево":
+#        servo.turn_left()
+#        return "Сервопривод повернут влево"
+#    elif command == "возврат" or command == "центр":
+#        servo.reset()
+#        return "Сервопривод в центре"
+
+# === СЕРВОПРИВОД ===
+# пока ОСТАНОВЛЕНО. Код есть, нет библиотек для работы с сервоприводом. Выходы в код п работе с сервоприводов закомментированы. 
+# Раскомментировать, как появится библиотека
+def handle_servo_turn_right(transcript):
+    """
+    Обрабатывает команду "поверни вправо/направо".
+    Возвращает: (success, response_text)
+    """
+    try:
+#        servo.turn_right()   # Раскомментировать, как появится библиотека для сервопривода
+        print("✅Сервопривод повернут вправо")
+        return (True, "Камера повернута направо")
+    
+    except Exception as e:
+        print(f"❌Ошибка поворота вправо: {e}")
+        return (False, f"Не удалось повернуть вправо: {e}")
+
+
+def handle_servo_turn_left(transcript):
+    """
+    Обрабатывает команду "поверни влево/налево".
+    Возвращает: (success, response_text)
+    """
+    try:
+#        servo.turn_left()   # Раскомментировать, как появится библиотека для сервопривода
+        print("✅Сервопривод повернут влево")
+        return (True, "Камера повернута налево")
+    
+    except Exception as e:
+        print(f"❌Ошибка поворота влево: {e}")
+        return (False, f"Не удалось повернуть влево: {e}")
+
+
+def handle_servo_reset(transcript):
+    """
+    Обрабатывает команду "верни в центр/возврат/центр".
+    Возвращает: (success, response_text)
+    """
+    try:
+#        servo.reset()   # Раскомментировать, как появится библиотека для сервопривода
+        print("✅Сервопривод в центре")
+        return (True, "Камера возвращена в центр")
+    
+    except Exception as e:
+        print(f"❌Ошибка возврата в центр: {e}")
+        return (False, f"Не удалось вернуть в центр: {e}")
 
 # === ПОГОДА ===
 

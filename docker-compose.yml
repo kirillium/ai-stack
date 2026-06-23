@@ -220,28 +220,36 @@ services:
       context: ./volumes/assistant
       dockerfile: Dockerfile
     container_name: ai-assistant
-    # network_mode: host  # УДАЛИТЬ — используем дефолтную bridge сеть
+    network_mode: host  # УДАЛИТЬ — используем дефолтную bridge сеть
     devices:
       - /dev/snd:/dev/snd  # Проброс аудиоустройств (работает без host network)
-#      - /dev/video0:/dev/video0  # Доступ к камере
-#      - /dev/vchiq:/dev/vchiq    # Доступ к Vulkan/API камеры Pi
+      - /dev/gpiochip0:/dev/gpiochip0  # Доступ к GPIO Pi 5 [web:15][web:29]
+      - /dev/gpiomem:/dev/gpiomem      # Альтернатива для gpiozero
+      - /dev/video0:/dev/video0  # Доступ к камере
+      - /dev/vchiq:/dev/vchiq    # Доступ к Vulkan/API камеры Pi
     volumes:
       - ./volumes/assistant:/app
 #      - ./volumes/assistant:/data
       - ./volumes/assistant/audio:/app/audio
-#      - /run/udev:/run/udev:ro   # Необходимо для OpenCV/libcamera
+      - /run/udev:/run/udev:ro   # Необходимо для OpenCV/libcamera
     environment:
 #      - AUDIO_DEVICE=default
 #      - WAKE_WORD_MODEL=ok_nabu
 #      - WHISPER_MODEL=base
 #      - OLLAMA_MODEL=gemma3:1b
       - PYTHONUNBUFFERED=1
+      - GPIO_USE_LGPIO=1               # Явно указать использование lgpio
+#      - PIGPIO_ADDR=192.168.1.82
+#      - PIGPIO_PORT=8888
+
       # URLs сервисов по именам из docker network
 #      - WHISPER_URL=http://ai-whisper:8200/v1/audio/transcriptions
 #      - OLLAMA_URL=http://ai-ollama:11434/api/generate
 #      - PIPER_URL=http://ai-piper:5000/api/tts
 #      - OPENWAKEWORD_URL=http://ai-openwakeword:10400
     restart: unless-stopped
+#    user: root  # ДОБАВИТЬ: необходим для доступа к /dev/gpiomem
+    privileged: true                   # ДОБАВИТЬ: необходим для доступа к GPIO на Pi 5
     depends_on:
       - ollama
       - whisper

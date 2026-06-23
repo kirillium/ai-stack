@@ -26,8 +26,15 @@ RUN apt-get update && apt-get install -y \
     libxrender1 \
     ffmpeg \
     g++ \
+# для сервопривода
+    gcc \
+    python3-dev \
+#    liblgpio-dev \
+#    lgpio \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
+
+#RUN apt-get install -y rpi-gpio
 
 # Копирование requirements
 COPY requirements.txt .
