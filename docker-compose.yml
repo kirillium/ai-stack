@@ -259,3 +259,19 @@ services:
       driver: "json-file"
       options:
         max-size: "20m"
+
+  # Сервис по управлению пылесосом и получению токена
+  miio-tool:
+    image: node:20-alpine
+    container_name: ai-miio-tool
+    working_dir: /tools
+    volumes:
+      - ./volumes/assistant:/app
+      - ./volumes/miio-tool:/tools
+      - miio_data:/root/.miio
+    command: sh -lc "npm install -g miio && tail -f /dev/null"
+    networks:
+      - default
+    restart: unless-stopped
+volumes:
+  miio_data:

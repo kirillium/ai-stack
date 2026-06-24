@@ -76,9 +76,20 @@ reminder:
 
 # === ПЛАН-ПЛАН  БЛОК ПЫЛЕСОСА (твой текущий) ===
 vacuum:
-  api_url: "http://vacuum-api:8080"
-  start_endpoint: "/start"
-  stop_endpoint: "/stop"
+#  api_url: "http://vacuum-api:8080"
+#  start_endpoint: "/start"
+#  stop_endpoint: "/stop"
+  enabled: true
+  provider: "python-miio"
+  model: "roborock.vacuum.s5"
+  ip: "192.168.1.100"
+  token: "PUT_TOKEN_HERE"
+  discover:
+    enabled: true
+    provider: "miio"
+    container: "miio-tool"
+    sync: true
+    timeout_sec: 180
 
 # === ПЛАН-ОСТАНОВЛЕНО БЛОК СЕРВОПРИВОДА ===
 servo:

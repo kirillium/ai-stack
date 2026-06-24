@@ -7,12 +7,16 @@ import os
 from datetime import datetime
 import shutil
 #from servo_controller import ServoController   # Раскомментировать, как появится библиотека для сервопривода
+from cleaner_controller import CleanerController
 
 # Глобальные переменные для музыки (импортируются из orchestrator.py)
 music_process = None
 music_playing = False
 current_stream = None  # Текущий источник: "jamendo" или "server"
 #servo = ServoController('config.yaml')  # Раскомментировать, как появится библиотека для сервопривода
+cleaner = CleanerController("config.yaml")
+
+
 
 # Импортируем CONFIG из orchestrator.py (он будет загружен перед этим модулем)
 CONFIG = None
@@ -369,61 +373,18 @@ def handle_volume_down(transcript):
 # === ПЫЛЕСОС ===
 
 def handle_vacuum_start(transcript):
-    """
-    Обрабатывает команду включения пылесоса.
-    Возвращает: (success, response_text)
-    """
-    if CONFIG is None:
-        return (False, "Конфиг не загружен")
-    
-    api_url = CONFIG["vacuum"]["api_url"]
-    start_endpoint = CONFIG["vacuum"]["start_endpoint"]
-    
     try:
-        response = requests.post(
-            f"{api_url}{start_endpoint}",
-            timeout=10
-        )
-        
-        if response.status_code == 200:
-            print("✅Пылесос включён")
-            return (True, "Пылесос включён")
-        else:
-            print(f"❌Ошибка пылесоса: {response.status_code}")
-            return (False, f"Не удалось включить пылесос: {response.status_code}")
-            
+        result = cleaner.start()
+        return (True, f"Пылесос включён: {result}")
     except Exception as e:
-        print(f"❌Ошибка подключения к пылесосу: {e}")
-        return (False, f"Ошибка подключения к пылесосу: {e}")
-
+        return (False, f"Не удалось включить пылесос: {e}")
 
 def handle_vacuum_stop(transcript):
-    """
-    Обрабатывает команду выключения пылесоса.
-    Возвращает: (success, response_text)
-    """
-    if CONFIG is None:
-        return (False, "Конфиг не загружен")
-    
-    api_url = CONFIG["vacuum"]["api_url"]
-    stop_endpoint = CONFIG["vacuum"]["stop_endpoint"]
-    
     try:
-        response = requests.post(
-            f"{api_url}{stop_endpoint}",
-            timeout=10
-        )
-        
-        if response.status_code == 200:
-            print("✅Пылесос выключён")
-            return (True, "Пылесос выключён")
-        else:
-            print(f"❌Ошибка пылесоса: {response.status_code}")
-            return (False, f"Не удалось выключить пылесос: {response.status_code}")
-            
+        result = cleaner.stop()
+        return (True, f"Пылесос выключён: {result}")
     except Exception as e:
-        print(f"❌Ошибка подключения к пылесосу: {e}")
-        return (False, f"Ошибка подключения к пылесосу: {e}")
+        return (False, f"Не удалось выключить пылесос: {e}")
 
 
 # === НАПОМИНАНИЕ ===
