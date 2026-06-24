@@ -1,6 +1,5 @@
 import subprocess
 import yaml
-#from miio import DeviceFactory
 
 class CleanerController:
     def __init__(self, config_path="config.yaml"):
@@ -8,6 +7,7 @@ class CleanerController:
         self.config = self._load_config()
         self.vacuum_cfg = self.config.get("vacuum", {})
         self.device = None
+        self._miio_import_error = None
 
     def _load_config(self):
         with open(self.config_path, "r", encoding="utf-8") as f:
@@ -16,12 +16,21 @@ class CleanerController:
     def _get_ip_token(self):
         ip = self.vacuum_cfg.get("ip")
         token = self.vacuum_cfg.get("token")
-        if not ip or not token:
-            raise ValueError("Не заданы vacuum.ip или vacuum.token")
+        if not ip or not token or token == "PUT_TOKEN_HERE":
+            raise ValueError("Токен/ип пылесоса не настроены")
         return ip, token
+
+    def _get_device_factory(self):
+        try:
+            from miio import DeviceFactory
+            return DeviceFactory
+        except Exception as e:
+            self._miio_import_error = e
+            raise RuntimeError(f"python-miio недоступен: {e}")
 
     def connect(self):
         ip, token = self._get_ip_token()
+        DeviceFactory = self._get_device_factory()
         self.device = DeviceFactory.create(ip, token)
         return self.device
 

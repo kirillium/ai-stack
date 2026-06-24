@@ -7,15 +7,26 @@ import os
 from datetime import datetime
 import shutil
 #from servo_controller import ServoController   # Раскомментировать, как появится библиотека для сервопривода
-from cleaner_controller import CleanerController
+#from cleaner_controller import CleanerController
 
 # Глобальные переменные для музыки (импортируются из orchestrator.py)
 music_process = None
 music_playing = False
 current_stream = None  # Текущий источник: "jamendo" или "server"
 #servo = ServoController('config.yaml')  # Раскомментировать, как появится библиотека для сервопривода
-cleaner = CleanerController("config.yaml")
 
+#вариант 1 подключения данных пылесоса (роняет assistent, если нет токена)
+#cleaner = CleanerController("config.yaml")
+
+#вариант 2 подключения данных пылесоса ("ленивое"подключение)
+_cleaner = None
+
+def get_cleaner():
+    global _cleaner
+    if _cleaner is None:
+        from cleaner_controller import CleanerController
+        _cleaner = CleanerController("config.yaml")
+    return _cleaner
 
 
 # Импортируем CONFIG из orchestrator.py (он будет загружен перед этим модулем)
@@ -24,7 +35,6 @@ CONFIG = None
 def init_handlers(config):
     """Инициализирует handlers с CONFIG из orchestrator.py"""
     CONFIG = config
-
 
 # === МУЗЫКА (Jamendo) ===
 
@@ -374,14 +384,16 @@ def handle_volume_down(transcript):
 
 def handle_vacuum_start(transcript):
     try:
-        result = cleaner.start()
+#        result = cleaner.start()
+        result = get_cleaner().start()
         return (True, f"Пылесос включён: {result}")
     except Exception as e:
         return (False, f"Не удалось включить пылесос: {e}")
 
 def handle_vacuum_stop(transcript):
     try:
-        result = cleaner.stop()
+#        result = cleaner.stop()
+        result = get_cleaner().stop()
         return (True, f"Пылесос выключён: {result}")
     except Exception as e:
         return (False, f"Не удалось выключить пылесос: {e}")
