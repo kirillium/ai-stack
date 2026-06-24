@@ -81,7 +81,7 @@ vacuum:
 #  stop_endpoint: "/stop"
   enabled: true
   provider: "python-miio"
-  model: "roborock.vacuum.s5"
+  model: "roborock.vacuum.v1"
   ip: "192.168.1.100"
   token: "PUT_TOKEN_HERE"
   discover:
