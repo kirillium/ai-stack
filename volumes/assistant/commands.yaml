@@ -75,22 +75,45 @@ directive_commands:
   }
 
   # === Камера ===
-  "сколько человек ты видишь": {
-    "action": "count_people",
-    "response": "Я вижу {count} человек"
-  }
+#  "сколько человек ты видишь": {
+#    "action": "count_people",
+#    "response": "Я вижу {count} человек"
+#  }
+#  "распознай людей": {
+#    "action": "recognize_objects",
+#    "response": "{objects}"
+#  }
+#  "посмотри направо": {
+#    "action": "move_camera_right",
+#    "response": "Камера повернута направо"
+#  }
+#  "следи за шариком": {
+#    "action": "track_object",
+#    "response": "Начал слежение за шариком"
+#  }
+
+#вариант 2
   "распознай людей": {
     "action": "recognize_objects",
-    "response": "{objects}"
+    "response": "Я распознаю людей"
   }
-  "посмотри направо": {
-    "action": "move_camera_right",
-    "response": "Камера повернута направо"
+  "распознай": {
+    "action": "recognize_object",
+    "response": "Начинаю распознавание объекта"
   }
-  "следи за шариком": {
+  "следи за": {
     "action": "track_object",
-    "response": "Начал слежение за шариком"
+    "response": "Начинаю слежение за объектом на 1 минуту"
   }
+  "покажи камеру": {
+    "action": "camera_preview",
+    "response": "Открываю камеру"
+  }
+  "сделай кадр": {
+    "action": "camera_snapshot",
+    "response": "Кадр сохранён"
+  }
+
 
   # === Пылесос ===
   "включи пылесос": {

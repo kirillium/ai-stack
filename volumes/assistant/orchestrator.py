@@ -43,7 +43,11 @@ def load_directive_handlers():
         handle_vacuum_start,
         handle_vacuum_stop,
         handle_reminder_set,
-        handle_weather_get
+        handle_weather_get,
+        handle_camera_snapshot,
+        handle_camera_preview,
+        handle_recognize_object,
+        handle_track_object
     )
     return {
         "handle_play_music": handle_play_music,
@@ -51,7 +55,11 @@ def load_directive_handlers():
         "handle_vacuum_start": handle_vacuum_start,
         "handle_vacuum_stop": handle_vacuum_stop,
         "handle_reminder_set": handle_reminder_set,
-        "handle_weather_get": handle_weather_get
+        "handle_weather_get": handle_weather_get,
+        "handle_camera_snapshot": handle_camera_snapshot,
+        "handle_camera_preview": handle_camera_preview,
+        "handle_recognize_object": handle_recognize_object,
+        "handle_track_object": handle_track_object
     }
 
 CONFIG = load_config()

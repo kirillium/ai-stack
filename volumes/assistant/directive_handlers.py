@@ -6,6 +6,7 @@ import json
 import os
 from datetime import datetime
 import shutil
+from camera_controller import CameraController #для камеры
 #from servo_controller import ServoController   # Раскомментировать, как появится библиотека для сервопривода
 #from cleaner_controller import CleanerController
 
@@ -28,6 +29,15 @@ def get_cleaner():
         _cleaner = CleanerController("config.yaml")
     return _cleaner
 
+#для камеры глобальная переменная и инициализатор
+camera_controller = None
+
+def get_camera():
+    global camera_controller
+    if camera_controller is None:
+#        camera_controller = CameraController("config.yaml")   #старый вариант
+        camera_controller = CameraController("/app/config.yaml")
+    return camera_controller
 
 # Импортируем CONFIG из orchestrator.py (он будет загружен перед этим модулем)
 CONFIG = None
@@ -379,6 +389,70 @@ def handle_volume_down(transcript):
         print(f"❌Ошибка уменьшения громкости: {e}")
         return (False, f"Не удалось уменьшить громкость: {e}")
 
+# === КАМЕРА  ===
+
+def handle_camera_snapshot(transcript):
+    """
+    Делает снимок с камеры и сохраняет его в output_dir.
+    """
+    try:
+        ok, path = get_camera().capture_snapshot()
+        if not ok:
+            return (False, "Не удалось сделать кадр")
+
+        print(f"✅ Кадр сохранён: {path}")
+        return (True, f"Кадр сохранён: {path}")
+
+    except Exception as e:
+        print(f"❌Ошибка снимка камеры: {e}")
+        return (False, f"Не удалось сделать кадр: {e}")
+
+
+def handle_camera_preview(transcript):
+    """
+    Проверяет доступность камеры и сообщает, что поток можно открыть.
+    """
+    try:
+        cam = get_camera()
+        ok, path = cam.capture_snapshot()
+        if not ok:
+            return (False, "Не удалось открыть камеру")
+
+        print(f"✅ Камера доступна, последний кадр: {path}")
+        return (True, f"Камера доступна, кадр: {path}")
+
+    except Exception as e:
+        print(f"❌Ошибка предпросмотра камеры: {e}")
+        return (False, f"Не удалось открыть камеру: {e}")
+
+def handle_recognize_object(transcript):
+    """
+    Заготовка: распознать конкретный объект.
+    Пока просто делает кадр.
+    """
+    try:
+        ok, path = get_camera().capture_snapshot()
+        if not ok:
+            return (False, "Не удалось сделать кадр для распознавания")
+
+        return (True, f"Сделал кадр для распознавания объекта: {path}")
+    except Exception as e:
+        return (False, f"Не удалось распознать объект: {e}")
+
+
+def handle_track_object(transcript):
+    """
+    Заготовка: следить за объектом 1 минуту.
+    Пока только делает кадр и сообщает о старте.
+    """
+    try:
+        ok, path = get_camera().capture_snapshot()
+        if not ok:
+            return (False, "Не удалось запустить слежение")
+
+        return (True, f"Начал слежение за объектом, стартовый кадр: {path}")
+    except Exception as e:
+        return (False, f"Не удалось начать слежение: {e}")
 
 # === ПЫЛЕСОС ===
 

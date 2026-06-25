@@ -42,6 +42,9 @@ COPY requirements.txt .
 # Установка Python зависимостей
 RUN pip install --no-cache-dir -r requirements.txt
 
+#временно, для отладки camera-stream
+RUN python -m pip show Flask && python -c "import flask; print(flask.__version__)"
+
 # Копирование скрипта оркестратора
 COPY orchestrator.py .
 COPY config.yaml .

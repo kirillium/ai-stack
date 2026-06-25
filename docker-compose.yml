@@ -260,6 +260,28 @@ services:
       options:
         max-size: "20m"
 
+  # Сервис по управлению видеопотоком
+  camera-stream:
+    build:
+      context: ./volumes/assistant
+      dockerfile: Dockerfile
+    container_name: ai-camera-stream
+    devices:
+      - /dev/video0:/dev/video0
+      - /dev/vchiq:/dev/vchiq
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./volumes/assistant:/app
+      - ./volumes/assistant/audio:/app/audio
+      - /run/udev:/run/udev:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+      - CAMERA_STREAM_PORT=5001
+    restart: no
+    privileged: true
+    command: ["python", "camera_stream.py"]
+
   # Сервис по управлению пылесосом и получению токена
   miio-tool:
     image: node:20-alpine
@@ -273,5 +295,6 @@ services:
     networks:
       - default
     restart: unless-stopped
+
 volumes:
   miio_data:
