@@ -7,7 +7,12 @@ from camera_controller import CameraController
 PORT = int(os.getenv("CAMERA_STREAM_PORT", "5001"))
 
 app = Flask(__name__)
-cam = CameraController("/app/config.yaml")
+
+try:
+    cam = CameraController("/app/config.yaml")
+except Exception as e:
+    print(f"camera init failed: {e}")
+    cam = None
 
 
 @app.get("/")
@@ -25,7 +30,8 @@ def index():
 
 @app.get("/snapshot")
 def snapshot():
-    print("snapshot requested")
+    if cam is None:
+        return ("camera not initialized", 500)
     ok, path = cam.capture_snapshot()
     if not ok:
         return ("camera error", 500)
@@ -34,7 +40,8 @@ def snapshot():
 
 @app.get("/stream")
 def stream():
-    print("[http] /stream requested")
+    if cam is None:
+        return ("camera not initialized", 500)
     return Response(
         cam.mjpeg_generator(),
         mimetype="multipart/x-mixed-replace; boundary=frame"

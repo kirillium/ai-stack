@@ -279,6 +279,7 @@ services:
       - PYTHONUNBUFFERED=1
       - CAMERA_STREAM_PORT=5001
     restart: no
+#    user: root
     privileged: true
     command: ["python", "camera_stream.py"]
 
