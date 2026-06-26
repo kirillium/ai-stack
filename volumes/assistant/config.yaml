@@ -64,12 +64,25 @@ volume:
 
 # === БЛОК КАМЕРЫ ===
 camera:
-  device: 0
+  mode: face
+
   width: 1280
   height: 720
-  fps: 30
-  fourcc: MJPG
+  timeout_ms: 200
   output_dir: /app/audio/camera
+
+  face_cascade: haarcascade_frontalface_default.xml
+  face_label: face
+  face_min_size: [40, 40]
+  face_scale_factor: 1.1
+  face_min_neighbors: 5
+
+  yolo_model: yolov8n.pt
+  yolo_imgsz: 640
+  yolo_conf: 0.35
+  yolo_iou: 0.45
+  yolo_device: cpu
+
 
 # === ПЛАН-ПЛАН БЛОК ПОГОДЫ (заполни API погоды) ===
 weather:

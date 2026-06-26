@@ -1,3 +1,5 @@
+# volumes/assistant/camera_stream.py
+
 import os
 from flask import Flask, Response, send_file
 from camera_controller import CameraController
@@ -23,6 +25,7 @@ def index():
 
 @app.get("/snapshot")
 def snapshot():
+    print("snapshot requested")
     ok, path = cam.capture_snapshot()
     if not ok:
         return ("camera error", 500)
@@ -31,6 +34,7 @@ def snapshot():
 
 @app.get("/stream")
 def stream():
+    print("[http] /stream requested")
     return Response(
         cam.mjpeg_generator(),
         mimetype="multipart/x-mixed-replace; boundary=frame"

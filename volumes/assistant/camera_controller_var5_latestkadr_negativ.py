@@ -1,10 +1,8 @@
 import time
 from pathlib import Path
-import subprocess
-import tempfile
+import yaml
 import numpy as np
 import cv2
-import yaml
 
 
 class CameraController:
@@ -13,9 +11,7 @@ class CameraController:
             self.config = yaml.safe_load(f)
 
         cam = self.config.get("camera", {})
-        self.width = cam.get("width", 1280)
-        self.height = cam.get("height", 720)
-        self.timeout = cam.get("timeout_ms", 200)
+        self.source_path = Path(cam.get("source_path", "/app/audio/camera/latest.jpg"))
         self.output_dir = Path(cam.get("output_dir", "/app/audio/camera"))
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -29,25 +25,11 @@ class CameraController:
         self.scale_factor = float(cam.get("scale_factor", 1.1))
         self.min_neighbors = int(cam.get("min_neighbors", 5))
 
-    def get_raw_frame(self):
-        tmp = self.output_dir / f"_tmp_{int(time.time() * 1000)}.jpg"
-        cmd = [
-            "rpicam-jpeg",
-            "--output", str(tmp),
-            "--width", str(self.width),
-            "--height", str(self.height),
-            "--timeout", str(self.timeout),
-        ]
-        proc = subprocess.run(cmd, capture_output=True, text=True)
-        if proc.returncode != 0 or not tmp.exists():
+    def read_frame(self):
+        if not self.source_path.exists():
             return False, None
 
-        data = tmp.read_bytes()
-        try:
-            tmp.unlink(missing_ok=True)
-        except Exception:
-            pass
-
+        data = self.source_path.read_bytes()
         arr = np.frombuffer(data, dtype=np.uint8)
         frame = cv2.imdecode(arr, cv2.IMREAD_COLOR)
         return (frame is not None), frame
@@ -60,6 +42,7 @@ class CameraController:
             minNeighbors=self.min_neighbors,
             minSize=self.min_size,
         )
+
         for (x, y, w, h) in items:
             cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
             cv2.putText(
@@ -71,10 +54,11 @@ class CameraController:
                 (0, 255, 0),
                 2,
             )
+
         return frame
 
     def capture_snapshot(self, filename=None):
-        ok, frame = self.get_raw_frame()
+        ok, frame = self.read_frame()
         if not ok:
             return False, None
 
@@ -89,21 +73,35 @@ class CameraController:
         return saved, str(filename)
 
     def mjpeg_generator(self):
-        while True:
-            ok, frame = self.get_raw_frame()
-            if not ok:
-                time.sleep(0.1)
-                continue
+        last_mtime = 0.0
 
-            frame = self.annotate_frame(frame)
-            ok, buf = cv2.imencode(".jpg", frame)
-            if not ok:
+        while True:
+            if not self.source_path.exists():
                 time.sleep(0.05)
                 continue
 
-            yield (
-                b"--frame\r\n"
-                b"Content-Type: image/jpeg\r\n\r\n" +
-                buf.tobytes() +
-                b"\r\n"
-            )
+            mtime = self.source_path.stat().st_mtime
+            if mtime == last_mtime:
+                time.sleep(0.02)
+                continue
+
+            last_mtime = mtime
+
+            try:
+                ok, frame = self.read_frame()
+                if not ok:
+                    continue
+
+                frame = self.annotate_frame(frame)
+                ok, buf = cv2.imencode(".jpg", frame)
+                if not ok:
+                    continue
+
+                yield (
+                    b"--frame\r\n"
+                    b"Content-Type: image/jpeg\r\n\r\n" +
+                    buf.tobytes() +
+                    b"\r\n"
+                )
+            except Exception:
+                time.sleep(0.05)
