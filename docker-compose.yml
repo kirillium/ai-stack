@@ -232,7 +232,6 @@ services:
 #      - ./volumes/assistant:/data
       - ./volumes/assistant/audio:/app/audio
       - /run/udev:/run/udev:ro   # Необходимо для OpenCV/libcamera
-      - ./volumes/assistant/target:/app/targets  #папка для загрузки файлов для сравнения
     environment:
 #      - AUDIO_DEVICE=default
 #      - WAKE_WORD_MODEL=ok_nabu
@@ -276,6 +275,8 @@ services:
       - ./volumes/assistant:/app
       - ./volumes/assistant/audio:/app/audio
       - /run/udev:/run/udev:ro
+      - ./volumes/assistant/target:/app/targets  #папка для загрузки файлов для сравнения
+      - ./volumes/assistant/camera:/app/audio/camera    #подумать над расположением и необходимостью этой папки
     environment:
       - PYTHONUNBUFFERED=1
       - CAMERA_STREAM_PORT=5001

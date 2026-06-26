@@ -47,6 +47,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
+# для режима распознавания face_recognition
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    gfortran \
+    libopenblas-dev \
+    liblapack-dev \
+    libx11-dev \
+    libgtk-3-dev \
+    libjpeg-dev \
+    libboost-all-dev \
+#    python3-dev \   уже установлено
+#    libgl1 \      уже установлено
+#    libglib2.0-0 \   уже установлено
+    && rm -rf /var/lib/apt/lists/*
+
 # Обходной вариант для установки rpicam-apps (ТОЛЬКО этот пакет, нужно для видео в браузере, сервис видео-потока)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \

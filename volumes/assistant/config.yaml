@@ -65,7 +65,8 @@ volume:
 # === БЛОК КАМЕРЫ ===
 camera:
 #  mode: face 
-  mode: yolo
+#  mode: yolo
+  mode: face_recognition
 
   width: 1280
   height: 720
