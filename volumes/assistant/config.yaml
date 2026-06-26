@@ -64,7 +64,8 @@ volume:
 
 # === БЛОК КАМЕРЫ ===
 camera:
-  mode: face
+#  mode: face 
+  mode: yolo
 
   width: 1280
   height: 720
@@ -82,6 +83,11 @@ camera:
   yolo_conf: 0.35
   yolo_iou: 0.45
   yolo_device: cpu
+
+  face_recognition_target: /app/targets/target.jpg
+  face_recognition_tolerance: 0.45
+  face_recognition_model: hog
+  face_recognition_label: target_match
 
 
 # === ПЛАН-ПЛАН БЛОК ПОГОДЫ (заполни API погоды) ===

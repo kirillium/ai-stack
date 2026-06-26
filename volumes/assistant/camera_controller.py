@@ -1,9 +1,12 @@
 import time
 from pathlib import Path
 import subprocess
+import os
 import numpy as np
 import cv2
 import yaml
+
+os.environ.setdefault("YOLO_CONFIG_DIR", "/tmp/ultralytics")
 
 
 class CameraController:
@@ -35,11 +38,37 @@ class CameraController:
         self.yolo_device = cam.get("yolo_device", "cpu")
         self._yolo = None
 
+        self.fr_target_path = Path(cam.get("face_recognition_target", "/app/targets/target.jpg"))
+        self.fr_tolerance = float(cam.get("face_recognition_tolerance", 0.45))
+        self.fr_model = cam.get("face_recognition_model", "hog")
+        self.fr_label = cam.get("face_recognition_label", "target_match")
+        self._fr = None
+        self.target_encodings = []
+
     def _load_yolo(self):
         if self._yolo is None:
             from ultralytics import YOLO
             self._yolo = YOLO(self.yolo_model_name)
         return self._yolo
+
+    def _load_face_recognition(self):
+        if self._fr is None:
+            import face_recognition
+            self._fr = face_recognition
+        return self._fr
+
+    def _load_target_encodings(self):
+        if not self.fr_target_path.exists():
+            self.target_encodings = []
+            return False
+
+        fr = self._load_face_recognition()
+        img = fr.load_image_file(str(self.fr_target_path))
+        locations = fr.face_locations(img, model=self.fr_model)
+        encodings = fr.face_encodings(img, locations)
+
+        self.target_encodings = encodings
+        return len(encodings) > 0
 
     def get_raw_frame(self):
         tmp = self.output_dir / f"_tmp_{int(time.time() * 1000)}.jpg"
@@ -132,6 +161,50 @@ class CameraController:
             )
         return frame
 
+    def annotate_face_recognition(self, frame):
+        try:
+            fr = self._load_face_recognition()
+        except Exception as e:
+            cv2.putText(frame, f"face_recognition unavailable: {e}", (20, 40),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+            return frame
+
+        if not self.target_encodings:
+            ok = self._load_target_encodings()
+            if not ok:
+                cv2.putText(frame, "target not loaded", (20, 40),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+                return frame
+
+        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        locations = fr.face_locations(rgb, model=self.fr_model)
+        encodings = fr.face_encodings(rgb, locations)
+
+        for (top, right, bottom, left), enc in zip(locations, encodings):
+            matches = fr.compare_faces(self.target_encodings, enc, tolerance=self.fr_tolerance)
+            distances = fr.face_distance(self.target_encodings, enc)
+
+            matched = bool(matches and any(matches))
+            label = self.fr_label if matched else "unknown"
+            color = (0, 255, 0) if matched else (0, 0, 255)
+
+            cv2.rectangle(frame, (left, top), (right, bottom), color, 2)
+            cv2.putText(
+                frame,
+                label,
+                (left, max(20, top - 8)),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.6,
+                color,
+                2,
+            )
+
+            if matched:
+                best = float(np.min(distances)) if len(distances) else 1.0
+                print(f"[face_recognition] MATCH {label} distance={best:.3f}")
+
+        return frame
+
     def annotate_frame(self, frame):
         if self.mode == "plain":
             return self.annotate_plain(frame)
@@ -139,6 +212,8 @@ class CameraController:
             return self.annotate_face(frame)
         if self.mode == "yolo":
             return self.annotate_yolo(frame)
+        if self.mode == "face_recognition":
+            return self.annotate_face_recognition(frame)
         return frame
 
     def capture_snapshot(self, filename=None):

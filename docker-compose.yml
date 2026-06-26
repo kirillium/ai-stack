@@ -232,6 +232,7 @@ services:
 #      - ./volumes/assistant:/data
       - ./volumes/assistant/audio:/app/audio
       - /run/udev:/run/udev:ro   # Необходимо для OpenCV/libcamera
+      - ./volumes/assistant/target:/app/targets  #папка для загрузки файлов для сравнения
     environment:
 #      - AUDIO_DEVICE=default
 #      - WAKE_WORD_MODEL=ok_nabu
