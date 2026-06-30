@@ -220,7 +220,7 @@ services:
       context: ./volumes/assistant
       dockerfile: Dockerfile
     container_name: ai-assistant
-    network_mode: host  # УДАЛИТЬ — используем дефолтную bridge сеть
+#    network_mode: host  # УДАЛИТЬ — используем дефолтную bridge сеть
     devices:
       - /dev/snd:/dev/snd  # Проброс аудиоустройств (работает без host network)
       - /dev/gpiochip0:/dev/gpiochip0  # Доступ к GPIO Pi 5 [web:15][web:29]

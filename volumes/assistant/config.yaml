@@ -4,17 +4,20 @@
 # Параметры аудио
 audio:
 #  device: "default"
-  input_device: "hw:2,0"    # Микрофон (card 2, device 0)
-  output_device: "hw:3,0"   # Колонка (card 3, device 0)
+#  input_device: "hw:2,0"    # Микрофон (card 2, device 0)
+#  output_device: "hw:3,0"   # Колонка (card 3, device 0)
+  input_device: 2           # card 2 (microphone)
+  output_device: 3          # card 3 (USB колонка)
   sample_rate: 48000
   channels: 1
+#  channels: 2               # ИЗМЕНИ на 2 (stereo) для USB
   duration_wakeword: 2
   duration_command: 3
-  silence_threshold: 0.01
+  silence_threshold: 0.01   #вроде нигде не используется
 
 # Модели AI
 models:
-  wake_word: "ok_nabu"
+  wake_word: "ok_nabu"   #"salut"   #"ok_nabu"
   whisper: "base"
   whisper_language: "ru"
   ollama: "qwen2.5:1.5b"
@@ -28,7 +31,7 @@ services:
 # Параметры работы
 runtime:
   test_mode: false
-  wake_word_threshold: 0.05
+  wake_word_threshold: 0.04
   wake_word_mode: "volume"  # "volume" или "openwakeword"
 
 
@@ -111,8 +114,8 @@ vacuum:
   enabled: true
   provider: "python-miio"
   model: "roborock.vacuum.v1"
-  ip: "192.168.1.100"
-  token: "PUT_TOKEN_HERE"
+  ip: "192.168.1.181"
+  token: "5a516f6c5a784d694a6d4c39734e4274"   # token устройства
   discover:
     enabled: true
     provider: "miio"

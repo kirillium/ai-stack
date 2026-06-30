@@ -73,7 +73,9 @@ def record_audio(duration=None, fs=None):
     if fs is None:
         fs = CONFIG["audio"]["sample_rate"]
 
-    channels = CONFIG["audio"]["channels"]
+    # Для ЗАПИСИ всегда используем 1 канал (microphone mono)
+    channels = 1
+#    channels = CONFIG["audio"]["channels"]  # если channels=1 (моно), проблем нет, если channels=2 (стерео), то будет ошибка, т.к. микрофон поддерживает моно
 
     print(f"🎤 Запись аудио ({duration} сек)...")
     recording = sd.rec(
@@ -202,15 +204,45 @@ def synthesize(text):
         return None
 
 # 6. Воспроизведение аудио через динамик
+#def play_audio(audio_path):
+#    print("▶️ Воспроизведение...")
+#    try:
+        # вариант 1
+        # ПРОВЕРИТЬ, куда выводит. Похоже, ошибка выбора устройства
+#        audio_device = CONFIG["audio"].get("output_device", CONFIG["audio"]["input_device"])
+#        cmd = ["aplay", "-D", audio_device, audio_path]
+
+        # вариант 2
+        # ИЗМЕНИТЬЬ: используй plughw для авто-конвертации каналов
+        # для варианта 2 НЕ ВНЕСЕНЫ правки в config
+        #audio_device = CONFIG["audio"].get("output_device", 3)
+
+        # Используем plughw (автоматически конвертирует mono→stereo)
+#        cmd = ["aplay", "-D", f"plughw:{audio_device},0", audio_path]
+
+#        subprocess.run(cmd, check=True, capture_output=True)
+#        print("✅ Аудио воспроизведено")
+#    except Exception as e:
+#        print(f"❌ Ошибка воспроизведения: {e}")
+
+# 6. Воспроизведение аудио через динамик
 def play_audio(audio_path):
     print("▶️ Воспроизведение...")
     try:
-        audio_device = CONFIG["audio"].get("output_device", CONFIG["audio"]["input_device"])
-        cmd = ["aplay", "-D", audio_device, audio_path]
+        # Получаем card номер (только число, без device)
+        audio_card = CONFIG["audio"].get("output_device", 0)
+
+        # Используем plughw для авто-конвертации mono→stereo
+        cmd = ["aplay", "-D", f"plughw:{audio_card},0", audio_path]
+
         subprocess.run(cmd, check=True, capture_output=True)
         print("✅ Аудио воспроизведено")
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Ошибка воспроизведения: {e}")
+        print(f"   Проверь: aplay -l (доступные устройства)")
     except Exception as e:
         print(f"❌ Ошибка воспроизведения: {e}")
+
 
 # 7. Детекция Wake Word (простой threshold на громкость)
 def detect_wake_word():
@@ -219,9 +251,12 @@ def detect_wake_word():
     recording, fs = record_audio(duration=2)
     # Вычисление громкости
     volume = np.mean(np.abs(recording))
-    threshold = 0.05
+
+    # Порог громкости threshold из config.yaml
+    threshold = CONFIG["runtime"]["wake_word_threshold"]
 
     print(f"📊 Volume: {volume}")
+    print(f"📊 Threshold: {threshold}")
 
     if volume > threshold:
         print("✅ Возможно wake word!")
