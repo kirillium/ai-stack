@@ -101,10 +101,16 @@ weather:
   city: "Moscow"                       # Город для погоды
 
 # === ПЛАН-ПЛАН БЛОК НАПОМИНАНЙ (можно использовать локальное или внешнее) ===
-reminder:
-  storage_file: "/tmp/reminders.json"  # Файл для хранения напоминаний
+#  storage_file: "/tmp/reminders.json"  # Файл для хранения напоминаний
   # Или внешнее API:
   # api_url: "http reminder-api:8080"
+reminders:
+  db_path: "/data/assistdata.db"        # единая база для разных сервисов
+  check_interval_seconds: 30
+  max_time_parse_attempts: 2
+  timezone: "Europe/Moscow"
+  dateparser:
+    prefer_dates_from: "future"
 
 # === ПЛАН-ПЛАН  БЛОК ПЫЛЕСОСА (твой текущий) ===
 vacuum:

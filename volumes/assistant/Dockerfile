@@ -87,7 +87,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -f /etc/apt/apt.conf.d/99allow-insecure-repos \
     && apt-get clean
 
-
 #RUN apt-get install -y rpi-gpio
 
 # Копирование requirements

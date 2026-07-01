@@ -18,6 +18,7 @@ import threading
 music_process = None  # Процесс mpv для потока
 music_playing = False  # Флаг включения музыки
 
+
 # Загрузка конфигурации из YAML
 def load_config():
     config_path = os.path.join(os.path.dirname(__file__), 'config.yaml')
@@ -42,7 +43,8 @@ def load_directive_handlers():
         handle_stop_music,
         handle_vacuum_start,
         handle_vacuum_stop,
-        handle_reminder_set,
+#        handle_reminder_set,
+        handle_set_reminder,
         handle_weather_get,
         handle_camera_snapshot,
         handle_camera_preview,
@@ -54,7 +56,8 @@ def load_directive_handlers():
         "handle_stop_music": handle_stop_music,
         "handle_vacuum_start": handle_vacuum_start,
         "handle_vacuum_stop": handle_vacuum_stop,
-        "handle_reminder_set": handle_reminder_set,
+#        "handle_reminder_set": handle_reminder_set,
+        "handle_set_reminder": handle_set_reminder,
         "handle_weather_get": handle_weather_get,
         "handle_camera_snapshot": handle_camera_snapshot,
         "handle_camera_preview": handle_camera_preview,
@@ -65,6 +68,37 @@ def load_directive_handlers():
 CONFIG = load_config()
 COMMANDS = load_commands()
 HANDLERS = load_directive_handlers()
+
+# === ИНИЦИАЛИЗАЦИЯ СЕРВИСА НАПОМИНАНИЙ ===
+from reminders import RemindersService
+import os
+
+rem_cfg = CONFIG.get('reminders', {})
+db_path = rem_cfg.get('db_path', '/data/assistdata.db')
+interval = rem_cfg.get('check_interval_seconds', 30)
+tz = rem_cfg.get('timezone', 'Europe/Moscow')
+dateparser_settings = rem_cfg.get('dateparser', {})
+
+def on_reminder_fire(reminder):
+    text = reminder.get('text', '')
+    remind_at = reminder.get('remind_at', '')
+    speak_text = f"Вы просили напомнить: {text} в {remind_at}"
+    try:
+        piper_say(speak_text)   # замените на реальную функцию озвучивания в orchestrator
+    except Exception as e:
+        print("Error in piper_say:", e)
+
+rem_service = RemindersService(
+    db_path=db_path,
+    check_interval_seconds=interval,
+    tz=tz,
+    dateparser_settings=dateparser_settings,
+    on_fire_callback=on_reminder_fire,
+    schema_path=os.path.join(os.path.dirname(__file__), "reminders_schema.sql")
+)
+rem_service.start()
+# инициализация напоминаний
+#---------------------------------------------------------
 
 # 1. Запись аудио с микрофона
 def record_audio(duration=None, fs=None):

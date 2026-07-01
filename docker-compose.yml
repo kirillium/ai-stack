@@ -232,6 +232,8 @@ services:
 #      - ./volumes/assistant:/data
       - ./volumes/assistant/audio:/app/audio
       - /run/udev:/run/udev:ro   # Необходимо для OpenCV/libcamera
+      - assistant_data:/data   # для БД и сервиса напоминаний
+      - ./volumes/assistant:/volumes/assistant:ro   # для БД и сервиса напоминаний
     environment:
 #      - AUDIO_DEVICE=default
 #      - WAKE_WORD_MODEL=ok_nabu
@@ -301,3 +303,4 @@ services:
 
 volumes:
   miio_data:
+  assistant_data:

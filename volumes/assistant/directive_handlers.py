@@ -474,12 +474,14 @@ def handle_vacuum_stop(transcript):
 
 
 # === НАПОМИНАНИЕ ===
-
+# СТАРЫЙ ВАРИАНТ, из заготовки
 def handle_reminder_set(transcript):
     """
     Обрабатывает команду установки напоминания.
     Возвращает: (success, response_text)
     """
+    print("СТАРЫЙ ВАРИАНТ НАПОМИНАНИЯ")
+
     if CONFIG is None:
         return (False, "Конфиг не загружен")
     
@@ -511,6 +513,30 @@ def handle_reminder_set(transcript):
     except Exception as e:
         print(f"❌Ошибка хранения напоминания: {e}")
         return (False, f"Не удалось установить напоминание: {e}")
+
+# НОВЫЙ вариант напоминания, с БД
+def handle_set_reminder(transcript_text: str, rem_service, orchestrator):
+    rid, info = rem_service.add_from_text(transcript_text)
+    if rid:
+        piper_say(f"Поставила напоминание: {transcript_text} на {info}")
+        return True
+    # если время не найдено — делаем 2 попытки
+    attempts = 0
+    while attempts < rem_service.parser.settings.get('max_attempts', 2) or attempts < 2:
+        attempts += 1
+        piper_say("Не расслышала время. Повторите, пожалуйста.")
+        # предполагается, что orchestrator.listen_once() вернёт текст от whisper
+        reply = orchestrator.listen_once(timeout=8)
+        if not reply:
+            continue
+        # пробуем парсить только время/фразу, но сохраняем исходный текст как текст напоминания
+        # Если reply содержит и текст и время, можно объединить или применять NLP
+        rid2, info2 = rem_service.add_from_text(f"{transcript_text} {reply}")
+        if rid2:
+            piper_say(f"Поставила напоминание: {transcript_text} на {info2}")
+            return True
+    piper_say("Не удалось установить напоминание.")
+    return False
 
 # === усправление сервоприводом ===
 #def handle_servo(command):
