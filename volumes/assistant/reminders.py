@@ -2,19 +2,34 @@ import sqlite3
 import threading
 import time
 import json
-from datetime import datetime, timezone
-from typing import Optional, Tuple, List, Dict
-import dateparser
 import os
+from datetime import datetime
+from typing import Optional, Tuple, List, Dict
 
-# Helpers
-def to_iso(dt: datetime) -> str:
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone(timezone.utc).isoformat()
+import dateparser
 
-def now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+
+def now_local() -> datetime:
+    return datetime.now()
+
+
+def fmt_local(dt: datetime) -> str:
+    return dt.replace(microsecond=0).strftime("%Y-%m-%d %H:%M:%S")
+
+
+def parse_any_datetime(value: str) -> datetime:
+    if not value:
+        raise ValueError("empty datetime value")
+
+    dt = dateparser.parse(value)
+    if dt is None:
+        raise ValueError(f"cannot parse datetime: {value}")
+
+    if dt.tzinfo is not None:
+        dt = dt.astimezone().replace(tzinfo=None)
+
+    return dt.replace(microsecond=0)
+
 
 class RemindersDB:
     def __init__(self, db_path: str, schema_path: Optional[str] = None):
@@ -29,143 +44,171 @@ class RemindersDB:
         return conn
 
     def _ensure_schema(self):
-        # Выполняем schema script над выбранным файлом БД
-        conn = self._get_conn()
-        cur = conn.cursor()
-        with open(self.schema_path, "r", encoding="utf-8") as f:
-            script = f.read()
-        cur.executescript(script)
-        conn.commit()
-        conn.close()
+        with self._get_conn() as conn:
+            with open(self.schema_path, "r", encoding="utf-8") as f:
+                conn.executescript(f.read())
 
-    # CRUD
-    def add_reminder(self, text: str, remind_at_iso: str, meta: Optional[Dict]=None) -> int:
-        conn = self._get_conn()
-        cur = conn.cursor()
-        cur.execute(
-            "INSERT INTO reminders (text, remind_at, meta) VALUES (?, ?, ?)",
-            (text, remind_at_iso, json.dumps(meta) if meta else None)
-        )
-        rid = cur.lastrowid
-        conn.commit()
-        conn.close()
-        return rid
+    def add_reminder(self, text: str, remind_at_local: str, meta: Optional[Dict] = None) -> int:
+        created_at_local = fmt_local(now_local())
+        with self._get_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                INSERT INTO reminders (text, remind_at, created_at, status, fired_at, meta)
+                VALUES (?, ?, ?, 'pending', NULL, ?)
+                """,
+                (text, remind_at_local, created_at_local, json.dumps(meta, ensure_ascii=False) if meta else None),
+            )
+            return cur.lastrowid
 
-    def get_pending_before(self, iso_time: str) -> List[Dict]:
-        conn = self._get_conn()
-        cur = conn.cursor()
-        cur.execute(
-            "SELECT * FROM reminders WHERE status = 'pending' AND remind_at <= ? ORDER BY remind_at ASC",
-            (iso_time,)
-        )
-        rows = [dict(r) for r in cur.fetchall()]
-        conn.close()
-        return rows
+    def list_all(self) -> List[Dict]:
+        with self._get_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT id, text, remind_at, status, created_at, fired_at, meta
+                FROM reminders
+                ORDER BY id ASC
+                """
+            )
+            return [dict(r) for r in cur.fetchall()]
 
-    def mark_fired(self, reminder_id: int):
-        conn = self._get_conn()
-        cur = conn.cursor()
-        cur.execute(
-            "UPDATE reminders SET status='fired', fired_at = ? WHERE id = ?",
-            (now_iso(), reminder_id)
-        )
-        conn.commit()
-        conn.close()
+    def list_pending(self, limit: int = 100) -> List[Dict]:
+        with self._get_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT id, text, remind_at, status, created_at, fired_at, meta
+                FROM reminders
+                WHERE status = 'pending'
+                ORDER BY remind_at ASC, id ASC
+                LIMIT ?
+                """,
+                (limit,),
+            )
+            return [dict(r) for r in cur.fetchall()]
+
+    def get_due(self, now_local_str: str) -> List[Dict]:
+        with self._get_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT id, text, remind_at, status, created_at, fired_at, meta
+                FROM reminders
+                WHERE status = 'pending' AND remind_at <= ?
+                ORDER BY remind_at ASC, id ASC
+                """,
+                (now_local_str,),
+            )
+            return [dict(r) for r in cur.fetchall()]
+
+    def mark_fired(self, reminder_id: int) -> bool:
+        fired_at_local = fmt_local(now_local())
+        with self._get_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                UPDATE reminders
+                SET status = 'fired', fired_at = ?
+                WHERE id = ? AND status = 'pending'
+                """,
+                (fired_at_local, reminder_id),
+            )
+            return cur.rowcount > 0
 
     def cancel_last_pending(self) -> Optional[Dict]:
-        conn = self._get_conn()
-        cur = conn.cursor()
-        cur.execute(
-            "SELECT * FROM reminders WHERE status='pending' ORDER BY created_at DESC LIMIT 1"
-        )
-        row = cur.fetchone()
-        if not row:
-            conn.close()
-            return None
-        rid = row['id']
-        cur.execute("UPDATE reminders SET status='cancelled' WHERE id = ?", (rid,))
-        conn.commit()
-        result = dict(row)
-        conn.close()
-        return result
+        with self._get_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT id, text, remind_at, status, created_at, fired_at, meta
+                FROM reminders
+                WHERE status = 'pending'
+                ORDER BY created_at DESC, id DESC
+                LIMIT 1
+                """
+            )
+            row = cur.fetchone()
+            if not row:
+                return None
 
-    def list_pending(self, limit: int = 50) -> List[Dict]:
-        conn = self._get_conn()
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM reminders WHERE status='pending' ORDER BY remind_at ASC LIMIT ?", (limit,))
-        rows = [dict(r) for r in cur.fetchall()]
-        conn.close()
-        return rows
+            cur.execute(
+                """
+                UPDATE reminders
+                SET status = 'cancelled'
+                WHERE id = ? AND status = 'pending'
+                """,
+                (row["id"],),
+            )
+            return dict(row) if cur.rowcount > 0 else None
 
-    def get_by_id(self, rid: int) -> Optional[Dict]:
-        conn = self._get_conn()
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM reminders WHERE id = ?", (rid,))
-        row = cur.fetchone()
-        conn.close()
-        return dict(row) if row else None
+    def get_by_id(self, reminder_id: int) -> Optional[Dict]:
+        with self._get_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT id, text, remind_at, status, created_at, fired_at, meta
+                FROM reminders
+                WHERE id = ?
+                """,
+                (reminder_id,),
+            )
+            row = cur.fetchone()
+            return dict(row) if row else None
 
-class ReminderParser:
-    def __init__(self, tz: str = "UTC", dateparser_settings: dict = None):
-        self.tz = tz
-        settings = {"PREFER_DATES_FROM": "future", "TIMEZONE": tz, "RETURN_AS_TIMEZONE_AWARE": True}
-        if dateparser_settings:
-            settings.update(dateparser_settings)
-        self.settings = settings
-
-    def parse_datetime(self, text: str) -> Tuple[Optional[datetime], float]:
-        dt = dateparser.parse(text, settings=self.settings)
-        if not dt:
-            return None, 0.0
-        low = text.lower()
-        confidence = 0.6
-        if any(k in low for k in ["в ", "в:", "завтра", "через", "сегодня", "утром", "вечером", "ночью"]):
-            confidence = 0.9
-        return dt, confidence
 
 class RemindersService:
-    def __init__(self, db_path: str, check_interval_seconds: int = 30, tz: str = "UTC", dateparser_settings: dict = None, on_fire_callback=None, schema_path: Optional[str] = None):
+    def __init__(self, db_path: str, check_interval_seconds: int = 30, on_fire_callback=None, schema_path: Optional[str] = None):
         self.db = RemindersDB(db_path, schema_path=schema_path)
-        self.parser = ReminderParser(tz, dateparser_settings)
         self.interval = check_interval_seconds
+        self.on_fire_callback = on_fire_callback
         self._running = False
         self._thread = None
-        self.on_fire_callback = on_fire_callback
 
-    # API
-    def add(self, text: str, remind_at: datetime = None, meta: dict = None) -> int:
-        if remind_at is None:
-            raise ValueError("remind_at required")
-        iso = to_iso(remind_at)
-        return self.db.add_reminder(text, iso, meta)
+    def add(self, text: str, remind_at, meta: dict = None) -> int:
+        if isinstance(remind_at, str):
+            remind_at = parse_any_datetime(remind_at)
+        elif isinstance(remind_at, datetime):
+            if remind_at.tzinfo is not None:
+                remind_at = remind_at.astimezone().replace(tzinfo=None)
+        else:
+            raise TypeError("remind_at must be str or datetime")
+
+        return self.db.add_reminder(text, fmt_local(remind_at), meta)
 
     def add_from_text(self, text: str) -> Tuple[Optional[int], str]:
-        dt, conf = self.parser.parse_datetime(text)
-        if not dt:
+        dt = dateparser.parse(text)
+        if dt is None:
             return None, "no_time"
+
+        if dt.tzinfo is not None:
+            dt = dt.astimezone().replace(tzinfo=None)
+
         rid = self.add(text, dt)
-        return rid, to_iso(dt)
+        return rid, fmt_local(dt)
 
     def cancel_last(self) -> Optional[Dict]:
         return self.db.cancel_last_pending()
 
-    def list_pending(self, limit: int = 50) -> List[Dict]:
+    def list_pending(self, limit: int = 100) -> List[Dict]:
         return self.db.list_pending(limit)
 
-    # Scheduler loop
+    def list_all(self) -> List[Dict]:
+        return self.db.list_all()
+
+    def mark_fired(self, reminder_id: int) -> bool:
+        return self.db.mark_fired(reminder_id)
+
     def _loop(self):
         self._running = True
         while self._running:
             try:
-                now = now_iso()
-                due = self.db.get_pending_before(now)
+                now_str = fmt_local(now_local())
+                due = self.db.get_due(now_str)
                 for r in due:
-                    try:
-                        self.db.mark_fired(r['id'])
+                    if self.db.mark_fired(r["id"]):
                         if self.on_fire_callback:
                             self.on_fire_callback(r)
-                    except Exception as e:
-                        print("Error firing reminder:", e)
                 time.sleep(self.interval)
             except Exception as e:
                 print("Reminders loop error:", e)

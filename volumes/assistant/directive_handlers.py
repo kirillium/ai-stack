@@ -522,7 +522,11 @@ def handle_set_reminder(transcript_text: str, rem_service, orchestrator):
         return True
     # если время не найдено — делаем 2 попытки
     attempts = 0
-    while attempts < rem_service.parser.settings.get('max_attempts', 2) or attempts < 2:
+    max_attempts = 2
+
+    while attempts < max_attempts: # новый вариант
+
+#    while attempts < rem_service.parser.settings.get('max_attempts', 2) or attempts < 2: # старый вариант
         attempts += 1
         piper_say("Не расслышала время. Повторите, пожалуйста.")
         # предполагается, что orchestrator.listen_once() вернёт текст от whisper

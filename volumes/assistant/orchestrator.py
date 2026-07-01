@@ -71,32 +71,50 @@ HANDLERS = load_directive_handlers()
 
 # === ИНИЦИАЛИЗАЦИЯ СЕРВИСА НАПОМИНАНИЙ ===
 from reminders import RemindersService
-import os
 
-rem_cfg = CONFIG.get('reminders', {})
-db_path = rem_cfg.get('db_path', '/data/assistdata.db')
-interval = rem_cfg.get('check_interval_seconds', 30)
-tz = rem_cfg.get('timezone', 'Europe/Moscow')
-dateparser_settings = rem_cfg.get('dateparser', {})
+REMINDERS_CFG = CONFIG.get("reminders", {})
+REMINDERS_DB_PATH = REMINDERS_CFG.get("db_path", "/data/assistdata.db")
+REMINDERS_INTERVAL = REMINDERS_CFG.get("check_interval_seconds", 30)
+
+rem_service = None
+
+def speak_text(text):
+    audio_path = synthesize(text)
+    if audio_path:
+        play_audio(audio_path)
 
 def on_reminder_fire(reminder):
-    text = reminder.get('text', '')
-    remind_at = reminder.get('remind_at', '')
-    speak_text = f"Вы просили напомнить: {text} в {remind_at}"
+    text = reminder.get("text", "")
+    remind_at = reminder.get("remind_at", "")
+#    message = f"Вы просили напомнить: {text} в {remind_at}"   # отладка
+#    print(message)  # отладка
     try:
-        piper_say(speak_text)   # замените на реальную функцию озвучивания в orchestrator
+#        speak_text(f"Вы просили напомнить: {text} в {remind_at}")
+        speak_text(f"Лог")
+        message = f"Вы просили напомнить: {text} в {remind_at}"   # отладка
+        print(message)  # отладка
+        #piper_say(speak_text)   # замените на реальную функцию озвучивания в orchestrator
     except Exception as e:
-        print("Error in piper_say:", e)
+        print("Error in speak_text:", e)
+# старый вариант
+#    speak_text(message)
+#    speak_text = f"Вы просили напомнить: {text} в {remind_at}"
+#    try:
+#        piper_say(speak_text)
+#    except Exception as e:
+#        print("Error in piper_say:", e)
 
-rem_service = RemindersService(
-    db_path=db_path,
-    check_interval_seconds=interval,
-    tz=tz,
-    dateparser_settings=dateparser_settings,
-    on_fire_callback=on_reminder_fire,
-    schema_path=os.path.join(os.path.dirname(__file__), "reminders_schema.sql")
-)
-rem_service.start()
+def init_reminders_service():
+    global rem_service
+    if rem_service is None:
+        rem_service = RemindersService(
+            db_path=REMINDERS_DB_PATH,
+            check_interval_seconds=REMINDERS_INTERVAL,
+            on_fire_callback=on_reminder_fire,
+            schema_path=os.path.join(os.path.dirname(__file__), "reminders_schema.sql"),
+        )
+        rem_service.start()
+
 # инициализация напоминаний
 #---------------------------------------------------------
 
@@ -299,7 +317,8 @@ def detect_wake_word():
 
 
 # === НОВЫЙ БЛОК: Обработка директивных команд ===
-def handle_directive_command(transcript):
+#def handle_directive_command(transcript): # старый вариант
+def handle_directive_command(transcript, rem_service, orchestrator): # новый вариант
     """
     Проверяет transcript на совпадение с директивными командами из commands.yaml.
     Возвращает:
@@ -323,8 +342,8 @@ def handle_directive_command(transcript):
             
             # Вызов обработчика
             try:
-                result = handler(transcript)
-                
+#                result = handler(transcript) # старый вариант
+                result = handler(transcript, rem_service, orchestrator) # новый вариант 
                 # Если обработчик возвращает строку (ответ пользователю)
                 if isinstance(result, str):
                     return True, result
@@ -339,11 +358,12 @@ def handle_directive_command(transcript):
                 # Если обработчик возвращает tuple (success, response)
                 elif isinstance(result, tuple):
                     success, response = result
-                    if success:
-                        return True, response
-                    else:
-                        return True, response
-                
+
+#                    if success:
+#                        return True, response
+#                    else:
+#                        return True, response
+                    return True, response if response else response_template # новый вариант
                 else:
                     return True, f"Команда {action} обработана"
                     
@@ -383,8 +403,9 @@ class VoiceAssistant:
                 return
 
         # === НОВЫЙ БЛОК: Проверка на директивную команду ===
-        directive_found, response_text = handle_directive_command(transcript)
-        
+#        directive_found, response_text = handle_directive_command(transcript) # старый вариант
+        directive_found, response_text = handle_directive_command(transcript, rem_service, self) # новый вариант
+
         if directive_found:
             print(f"💬 Ответ: {response_text}")
             audio_path = synthesize(response_text)
@@ -440,8 +461,17 @@ class VoiceAssistant:
 
 # Точка входа
 def main():
+# старый вариант, без сервиса напоминаний
+#    assistant = VoiceAssistant()
+#    assistant.run()
+# новый вариант, с сервисом напоминаний
+    init_reminders_service()
     assistant = VoiceAssistant()
-    assistant.run()
+    try:
+        assistant.run()
+    finally:
+        if rem_service:
+            rem_service.stop()
 
 if __name__ == "__main__":
     main()

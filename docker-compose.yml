@@ -243,12 +243,12 @@ services:
       - GPIO_USE_LGPIO=1               # Явно указать использование lgpio
 #      - PIGPIO_ADDR=192.168.1.82
 #      - PIGPIO_PORT=8888
-
       # URLs сервисов по именам из docker network
 #      - WHISPER_URL=http://ai-whisper:8200/v1/audio/transcriptions
 #      - OLLAMA_URL=http://ai-ollama:11434/api/generate
 #      - PIPER_URL=http://ai-piper:5000/api/tts
 #      - OPENWAKEWORD_URL=http://ai-openwakeword:10400
+      - TZ=Europe/Moscow
     restart: unless-stopped
 #    user: root  # ДОБАВИТЬ: необходим для доступа к /dev/gpiomem
     privileged: true                   # ДОБАВИТЬ: необходим для доступа к GPIO на Pi 5

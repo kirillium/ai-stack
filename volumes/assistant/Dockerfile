@@ -6,6 +6,12 @@ WORKDIR /app
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 ENV YOLO_CONFIG_DIR=/tmp/ultralytics
+ENV TZ=Europe/Moscow
+
+# TimeZone для сервиса напоминаний и работы БД (чтобы время сохранения записей было локальным)
+RUN apt-get update && apt-get install -y --no-install-recommends tzdata && \
+    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone && \
+    rm -rf /var/lib/apt/lists/*
 
 # Установка системных зависимостей
 #RUN apt-get update && apt-get install -y \
