@@ -71,6 +71,7 @@ HANDLERS = load_directive_handlers()
 
 # === ИНИЦИАЛИЗАЦИЯ СЕРВИСА НАПОМИНАНИЙ ===
 from reminders import RemindersService
+from datetime import datetime
 
 REMINDERS_CFG = CONFIG.get("reminders", {})
 REMINDERS_DB_PATH = REMINDERS_CFG.get("db_path", "/data/assistdata.db")
@@ -89,9 +90,20 @@ def on_reminder_fire(reminder):
 #    message = f"Вы просили напомнить: {text} в {remind_at}"   # отладка
 #    print(message)  # отладка
     try:
+        dt = datetime.fromisoformat(remind_at)
+        remind_time = dt.strftime("%H:%M")
+    except Exception:
+        remind_time = remind_at
+
+    try:
 #        speak_text(f"Вы просили напомнить: {text} в {remind_at}")
-        speak_text(f"Лог")
-        message = f"Вы просили напомнить: {text} в {remind_at}"   # отладка
+#        speak_text(f"Лог")
+#        message = f"Вы просили напомнить: {text} в {remind_at}"   # отладка
+
+        speak_text(f"Вы просили напомнить: {text} в {remind_time}")
+#        speak_text(f"Лог")
+        message = f"Вы просили напомнить: {text} в {remind_time}"   # отладка
+
         print(message)  # отладка
         #piper_say(speak_text)   # замените на реальную функцию озвучивания в orchestrator
     except Exception as e:
